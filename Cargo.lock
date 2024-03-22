@@ -6628,6 +6628,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "spin-tracing"
+version = "2.4.0-pre0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "dotenvy",
+ "once_cell",
+ "serde",
+ "spin-app",
+ "spin-core",
+ "spin-expressions",
+ "spin-world",
+ "table",
+ "thiserror",
+ "tokio",
+ "toml 0.5.11",
+ "vaultrs",
+]
+
+[[package]]
 name = "spin-trigger"
 version = "2.5.0-pre0"
 dependencies = [
@@ -6665,6 +6685,7 @@ dependencies = [
  "spin-sqlite",
  "spin-sqlite-inproc",
  "spin-sqlite-libsql",
+ "spin-tracing",
  "spin-variables",
  "spin-world",
  "tempfile",
