@@ -15,6 +15,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ahash"
+version = "0.8.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e89da841a80418a9b391ebaea17f5c112ffaaa96f621d2c285b5174da76b9011"
+dependencies = [
+ "cfg-if",
+ "once_cell",
+ "version_check",
+ "zerocopy",
+]
+
+[[package]]
 name = "ai"
 version = "0.1.0"
 dependencies = [
@@ -503,6 +515,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
+name = "otel-smoke-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "http 0.2.11",
+ "spin-sdk 2.2.0",
+]
+
+[[package]]
 name = "outbound-http-component"
 version = "0.1.0"
 dependencies = [
@@ -976,6 +997,15 @@ version = "0.1.0"
 dependencies = [
  "helper",
  "wit-bindgen 0.32.0",
+]
+
+name = "wasi-observe-tracing"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "http 0.2.11",
+ "spin-sdk 2.2.0",
+ "wit-bindgen 0.30.0",
 ]
 
 [[package]]
