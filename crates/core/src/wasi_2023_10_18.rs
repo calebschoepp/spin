@@ -3,6 +3,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use std::mem;
+use tracing::{instrument, Level};
 use wasmtime::component::{Linker, Resource};
 use wasmtime_wasi::preview2::{TrappableError, WasiView};
 use wasmtime_wasi_http::WasiHttpView;
@@ -185,14 +186,17 @@ impl<T> wasi::clocks::monotonic_clock::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_now(&mut", skip_all, level = Level::TRACE)]
     fn now(&mut self) -> wasmtime::Result<Instant> {
         <T as latest::clocks::monotonic_clock::Host>::now(self)
     }
 
+    #[instrument(name = "wasi_2023_10_18_resolution", skip_all, level = Level::TRACE)]
     fn resolution(&mut self) -> wasmtime::Result<Instant> {
         <T as latest::clocks::monotonic_clock::Host>::resolution(self)
     }
 
+    #[instrument(name = "wasi_2023_10_18_subscribe", skip_all, level = Level::TRACE)]
     fn subscribe(&mut self, when: Instant, absolute: bool) -> wasmtime::Result<Resource<Pollable>> {
         if absolute {
             <T as latest::clocks::monotonic_clock::Host>::subscribe_instant(self, when)
@@ -206,10 +210,12 @@ impl<T> wasi::clocks::wall_clock::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_now(&mut", skip_all, level = Level::TRACE)]
     fn now(&mut self) -> wasmtime::Result<Datetime> {
         Ok(<T as latest::clocks::wall_clock::Host>::now(self)?.into())
     }
 
+    #[instrument(name = "wasi_2023_10_18_resolution", skip_all, level = Level::TRACE)]
     fn resolution(&mut self) -> wasmtime::Result<Datetime> {
         Ok(<T as latest::clocks::wall_clock::Host>::resolution(self)?.into())
     }
@@ -219,6 +225,7 @@ impl<T> wasi::filesystem::types::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_filesystem_error_code", skip_all, level = Level::TRACE)]
     fn filesystem_error_code(
         &mut self,
         err: Resource<wasi::filesystem::types::Error>,
@@ -235,6 +242,7 @@ impl<T> wasi::filesystem::types::HostDescriptor for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_read_via_stream", skip_all, level = Level::TRACE)]
     fn read_via_stream(
         &mut self,
         self_: Resource<Descriptor>,
@@ -245,6 +253,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_write_via_stream", skip_all, level = Level::TRACE)]
     fn write_via_stream(
         &mut self,
         self_: Resource<Descriptor>,
@@ -255,6 +264,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_append_via_stream", skip_all, level = Level::TRACE)]
     fn append_via_stream(
         &mut self,
         self_: Resource<Descriptor>,
@@ -264,6 +274,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_advise", skip_all, level = Level::TRACE)]
     async fn advise(
         &mut self,
         self_: Resource<Descriptor>,
@@ -283,6 +294,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_sync_data", skip_all, level = Level::TRACE)]
     async fn sync_data(
         &mut self,
         self_: Resource<Descriptor>,
@@ -292,6 +304,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_get_flags", skip_all, level = Level::TRACE)]
     async fn get_flags(
         &mut self,
         self_: Resource<Descriptor>,
@@ -301,6 +314,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_get_type", skip_all, level = Level::TRACE)]
     async fn get_type(
         &mut self,
         self_: Resource<Descriptor>,
@@ -310,6 +324,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_size", skip_all, level = Level::TRACE)]
     async fn set_size(
         &mut self,
         self_: Resource<Descriptor>,
@@ -320,6 +335,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_times", skip_all, level = Level::TRACE)]
     async fn set_times(
         &mut self,
         self_: Resource<Descriptor>,
@@ -337,6 +353,8 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_read(
+        &mut", skip_all, level = Level::TRACE)]
     async fn read(
         &mut self,
         self_: Resource<Descriptor>,
@@ -349,6 +367,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_write(", skip_all, level = Level::TRACE)]
     async fn write(
         &mut self,
         self_: Resource<Descriptor>,
@@ -361,6 +380,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_read_directory", skip_all, level = Level::TRACE)]
     async fn read_directory(
         &mut self,
         self_: Resource<Descriptor>,
@@ -370,6 +390,8 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_sync(
+        &mut", skip_all, level = Level::TRACE)]
     async fn sync(
         &mut self,
         self_: Resource<Descriptor>,
@@ -377,6 +399,7 @@ where
         convert_result(<T as latest::filesystem::types::HostDescriptor>::sync(self, self_).await)
     }
 
+    #[instrument(name = "wasi_2023_10_18_create_directory_at", skip_all, level = Level::TRACE)]
     async fn create_directory_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -390,6 +413,8 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_stat(
+        &mut", skip_all, level = Level::TRACE)]
     async fn stat(
         &mut self,
         self_: Resource<Descriptor>,
@@ -397,6 +422,7 @@ where
         convert_result(<T as latest::filesystem::types::HostDescriptor>::stat(self, self_).await)
     }
 
+    #[instrument(name = "wasi_2023_10_18_stat_at", skip_all, level = Level::TRACE)]
     async fn stat_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -414,6 +440,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_times_at", skip_all, level = Level::TRACE)]
     async fn set_times_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -435,6 +462,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_link_at", skip_all, level = Level::TRACE)]
     async fn link_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -456,6 +484,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_open_at", skip_all, level = Level::TRACE)]
     async fn open_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -478,6 +507,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_readlink_at", skip_all, level = Level::TRACE)]
     async fn readlink_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -488,6 +518,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_remove_directory_at", skip_all, level = Level::TRACE)]
     async fn remove_directory_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -501,6 +532,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_rename_at", skip_all, level = Level::TRACE)]
     async fn rename_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -520,6 +552,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_symlink_at", skip_all, level = Level::TRACE)]
     async fn symlink_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -534,6 +567,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_access_at", skip_all, level = Level::TRACE)]
     async fn access_at(
         &mut self,
         _self_: Resource<Descriptor>,
@@ -544,6 +578,7 @@ where
         anyhow::bail!("access-at API is no longer supported in the latest snapshot")
     }
 
+    #[instrument(name = "wasi_2023_10_18_unlink_file_at", skip_all, level = Level::TRACE)]
     async fn unlink_file_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -555,6 +590,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_change_file_permissions_at", skip_all, level = Level::TRACE)]
     async fn change_file_permissions_at(
         &mut self,
         _self_: Resource<Descriptor>,
@@ -567,6 +603,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_change_directory_permissions_at", skip_all, level = Level::TRACE)]
     async fn change_directory_permissions_at(
         &mut self,
         _self_: Resource<Descriptor>,
@@ -579,6 +616,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_lock_shared", skip_all, level = Level::TRACE)]
     async fn lock_shared(
         &mut self,
         _self_: Resource<Descriptor>,
@@ -586,6 +624,7 @@ where
         anyhow::bail!("lock-shared API is no longer supported in the latest snapshot")
     }
 
+    #[instrument(name = "wasi_2023_10_18_lock_exclusive", skip_all, level = Level::TRACE)]
     async fn lock_exclusive(
         &mut self,
         _self_: Resource<Descriptor>,
@@ -593,6 +632,7 @@ where
         anyhow::bail!("lock-exclusive API is no longer supported in the latest snapshot")
     }
 
+    #[instrument(name = "wasi_2023_10_18_try_lock_shared", skip_all, level = Level::TRACE)]
     async fn try_lock_shared(
         &mut self,
         _self_: Resource<Descriptor>,
@@ -600,6 +640,7 @@ where
         anyhow::bail!("try-lock-shared API is no longer supported in the latest snapshot")
     }
 
+    #[instrument(name = "wasi_2023_10_18_try_lock_exclusive", skip_all, level = Level::TRACE)]
     async fn try_lock_exclusive(
         &mut self,
         _self_: Resource<Descriptor>,
@@ -607,6 +648,7 @@ where
         anyhow::bail!("try-lock-exclusive API is no longer supported in the latest snapshot")
     }
 
+    #[instrument(name = "wasi_2023_10_18_unlock", skip_all, level = Level::TRACE)]
     async fn unlock(
         &mut self,
         _self_: Resource<Descriptor>,
@@ -614,6 +656,7 @@ where
         anyhow::bail!("unlock API is no longer supported in the latest snapshot")
     }
 
+    #[instrument(name = "wasi_2023_10_18_is_same_object", skip_all, level = Level::TRACE)]
     async fn is_same_object(
         &mut self,
         self_: Resource<Descriptor>,
@@ -622,6 +665,7 @@ where
         <T as latest::filesystem::types::HostDescriptor>::is_same_object(self, self_, other).await
     }
 
+    #[instrument(name = "wasi_2023_10_18_metadata_hash", skip_all, level = Level::TRACE)]
     async fn metadata_hash(
         &mut self,
         self_: Resource<Descriptor>,
@@ -631,6 +675,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_metadata_hash_at", skip_all, level = Level::TRACE)]
     async fn metadata_hash_at(
         &mut self,
         self_: Resource<Descriptor>,
@@ -658,6 +703,7 @@ impl<T> wasi::filesystem::types::HostDirectoryEntryStream for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_read_directory_entry", skip_all, level = Level::TRACE)]
     async fn read_directory_entry(
         &mut self,
         self_: Resource<DirectoryEntryStream>,
@@ -680,6 +726,7 @@ impl<T> wasi::filesystem::preopens::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_directories", skip_all, level = Level::TRACE)]
     fn get_directories(&mut self) -> wasmtime::Result<Vec<(Resource<Descriptor>, String)>> {
         <T as latest::filesystem::preopens::Host>::get_directories(self)
     }
@@ -690,10 +737,12 @@ impl<T> wasi::io::poll::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_poll_list", skip_all, level = Level::TRACE)]
     async fn poll_list(&mut self, list: Vec<Resource<Pollable>>) -> wasmtime::Result<Vec<u32>> {
         <T as latest::io::poll::Host>::poll(self, list).await
     }
 
+    #[instrument(name = "wasi_2023_10_18_poll_one", skip_all, level = Level::TRACE)]
     async fn poll_one(&mut self, rep: Resource<Pollable>) -> wasmtime::Result<()> {
         <T as latest::io::poll::HostPollable>::block(self, rep).await
     }
@@ -703,6 +752,7 @@ impl<T> wasi::io::poll::HostPollable for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<Pollable>) -> wasmtime::Result<()> {
         <T as latest::io::poll::HostPollable>::drop(self, rep)
     }
@@ -714,10 +764,12 @@ impl<T> wasi::io::streams::HostError for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_to_debug_string", skip_all, level = Level::TRACE)]
     fn to_debug_string(&mut self, self_: Resource<Error>) -> wasmtime::Result<String> {
         <T as latest::io::error::HostError>::to_debug_string(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<Error>) -> wasmtime::Result<()> {
         <T as latest::io::error::HostError>::drop(self, rep)
     }
@@ -728,6 +780,7 @@ impl<T> wasi::io::streams::HostInputStream for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_read", skip_all, level = Level::TRACE)]
     async fn read(
         &mut self,
         self_: Resource<InputStream>,
@@ -737,6 +790,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_blocking_read", skip_all, level = Level::TRACE)]
     async fn blocking_read(
         &mut self,
         self_: Resource<InputStream>,
@@ -747,6 +801,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_skip", skip_all, level = Level::TRACE)]
     async fn skip(
         &mut self,
         self_: Resource<InputStream>,
@@ -756,6 +811,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_blocking_skip", skip_all, level = Level::TRACE)]
     async fn blocking_skip(
         &mut self,
         self_: Resource<InputStream>,
@@ -766,10 +822,12 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_subscribe", skip_all, level = Level::TRACE)]
     fn subscribe(&mut self, self_: Resource<InputStream>) -> wasmtime::Result<Resource<Pollable>> {
         <T as latest::io::streams::HostInputStream>::subscribe(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<InputStream>) -> wasmtime::Result<()> {
         <T as latest::io::streams::HostInputStream>::drop(self, rep)
     }
@@ -780,6 +838,7 @@ impl<T> wasi::io::streams::HostOutputStream for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_check_write", skip_all, level = Level::TRACE)]
     fn check_write(
         &mut self,
         self_: Resource<OutputStream>,
@@ -788,6 +847,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_write", skip_all, level = Level::TRACE)]
     fn write(
         &mut self,
         self_: Resource<OutputStream>,
@@ -797,6 +857,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_blocking_write_and_flush", skip_all, level = Level::TRACE)]
     async fn blocking_write_and_flush(
         &mut self,
         self_: Resource<OutputStream>,
@@ -809,6 +870,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_flush", skip_all, level = Level::TRACE)]
     fn flush(
         &mut self,
         self_: Resource<OutputStream>,
@@ -817,6 +879,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_blocking_flush", skip_all, level = Level::TRACE)]
     async fn blocking_flush(
         &mut self,
         self_: Resource<OutputStream>,
@@ -826,10 +889,12 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_subscribe", skip_all, level = Level::TRACE)]
     fn subscribe(&mut self, self_: Resource<OutputStream>) -> wasmtime::Result<Resource<Pollable>> {
         <T as latest::io::streams::HostOutputStream>::subscribe(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_write_zeroes", skip_all, level = Level::TRACE)]
     fn write_zeroes(
         &mut self,
         self_: Resource<OutputStream>,
@@ -839,6 +904,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_blocking_write_zeroes_and_flush", skip_all, level = Level::TRACE)]
     async fn blocking_write_zeroes_and_flush(
         &mut self,
         self_: Resource<OutputStream>,
@@ -851,6 +917,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_splice", skip_all, level = Level::TRACE)]
     async fn splice(
         &mut self,
         self_: Resource<OutputStream>,
@@ -862,6 +929,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_blocking_splice", skip_all, level = Level::TRACE)]
     async fn blocking_splice(
         &mut self,
         self_: Resource<OutputStream>,
@@ -874,6 +942,7 @@ where
         convert_stream_result(self, result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_forward", skip_all, level = Level::TRACE)]
     async fn forward(
         &mut self,
         _self_: Resource<OutputStream>,
@@ -882,6 +951,7 @@ where
         anyhow::bail!("forward API no longer supported")
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<OutputStream>) -> wasmtime::Result<()> {
         <T as latest::io::streams::HostOutputStream>::drop(self, rep)
     }
@@ -891,10 +961,12 @@ impl<T> wasi::random::random::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_random_bytes", skip_all, level = Level::TRACE)]
     fn get_random_bytes(&mut self, len: u64) -> wasmtime::Result<Vec<u8>> {
         <T as latest::random::random::Host>::get_random_bytes(self, len)
     }
 
+    #[instrument(name = "wasi_2023_10_18_get_random_u64", skip_all, level = Level::TRACE)]
     fn get_random_u64(&mut self) -> wasmtime::Result<u64> {
         <T as latest::random::random::Host>::get_random_u64(self)
     }
@@ -904,10 +976,12 @@ impl<T> wasi::random::insecure::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_insecure_random_bytes", skip_all, level = Level::TRACE)]
     fn get_insecure_random_bytes(&mut self, len: u64) -> wasmtime::Result<Vec<u8>> {
         <T as latest::random::insecure::Host>::get_insecure_random_bytes(self, len)
     }
 
+    #[instrument(name = "wasi_2023_10_18_get_insecure_random_u64", skip_all, level = Level::TRACE)]
     fn get_insecure_random_u64(&mut self) -> wasmtime::Result<u64> {
         <T as latest::random::insecure::Host>::get_insecure_random_u64(self)
     }
@@ -917,6 +991,7 @@ impl<T> wasi::random::insecure_seed::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_insecure_seed", skip_all, level = Level::TRACE)]
     fn insecure_seed(&mut self) -> wasmtime::Result<(u64, u64)> {
         <T as latest::random::insecure_seed::Host>::insecure_seed(self)
     }
@@ -926,6 +1001,7 @@ impl<T> wasi::cli::exit::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_exit", skip_all, level = Level::TRACE)]
     fn exit(&mut self, status: Result<(), ()>) -> wasmtime::Result<()> {
         <T as latest::cli::exit::Host>::exit(self, status)
     }
@@ -935,14 +1011,17 @@ impl<T> wasi::cli::environment::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_environment", skip_all, level = Level::TRACE)]
     fn get_environment(&mut self) -> wasmtime::Result<Vec<(String, String)>> {
         <T as latest::cli::environment::Host>::get_environment(self)
     }
 
+    #[instrument(name = "wasi_2023_10_18_get_arguments", skip_all, level = Level::TRACE)]
     fn get_arguments(&mut self) -> wasmtime::Result<Vec<String>> {
         <T as latest::cli::environment::Host>::get_arguments(self)
     }
 
+    #[instrument(name = "wasi_2023_10_18_initial_cwd", skip_all, level = Level::TRACE)]
     fn initial_cwd(&mut self) -> wasmtime::Result<Option<String>> {
         <T as latest::cli::environment::Host>::initial_cwd(self)
     }
@@ -952,6 +1031,7 @@ impl<T> wasi::cli::stdin::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_stdin", skip_all, level = Level::TRACE)]
     fn get_stdin(&mut self) -> wasmtime::Result<Resource<InputStream>> {
         <T as latest::cli::stdin::Host>::get_stdin(self)
     }
@@ -961,6 +1041,7 @@ impl<T> wasi::cli::stdout::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_stdout", skip_all, level = Level::TRACE)]
     fn get_stdout(&mut self) -> wasmtime::Result<Resource<OutputStream>> {
         <T as latest::cli::stdout::Host>::get_stdout(self)
     }
@@ -970,6 +1051,7 @@ impl<T> wasi::cli::stderr::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_stderr", skip_all, level = Level::TRACE)]
     fn get_stderr(&mut self) -> wasmtime::Result<Resource<OutputStream>> {
         <T as latest::cli::stderr::Host>::get_stderr(self)
     }
@@ -979,6 +1061,7 @@ impl<T> wasi::cli::terminal_stdin::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_terminal_stdin", skip_all, level = Level::TRACE)]
     fn get_terminal_stdin(&mut self) -> wasmtime::Result<Option<Resource<TerminalInput>>> {
         <T as latest::cli::terminal_stdin::Host>::get_terminal_stdin(self)
     }
@@ -988,6 +1071,7 @@ impl<T> wasi::cli::terminal_stdout::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_terminal_stdout", skip_all, level = Level::TRACE)]
     fn get_terminal_stdout(&mut self) -> wasmtime::Result<Option<Resource<TerminalOutput>>> {
         <T as latest::cli::terminal_stdout::Host>::get_terminal_stdout(self)
     }
@@ -997,6 +1081,7 @@ impl<T> wasi::cli::terminal_stderr::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_get_terminal_stderr", skip_all, level = Level::TRACE)]
     fn get_terminal_stderr(&mut self) -> wasmtime::Result<Option<Resource<TerminalOutput>>> {
         <T as latest::cli::terminal_stderr::Host>::get_terminal_stderr(self)
     }
@@ -1008,6 +1093,7 @@ impl<T> wasi::cli::terminal_input::HostTerminalInput for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<TerminalInput>) -> wasmtime::Result<()> {
         <T as latest::cli::terminal_input::HostTerminalInput>::drop(self, rep)
     }
@@ -1019,6 +1105,7 @@ impl<T> wasi::cli::terminal_output::HostTerminalOutput for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<TerminalOutput>) -> wasmtime::Result<()> {
         <T as latest::cli::terminal_output::HostTerminalOutput>::drop(self, rep)
     }
@@ -1030,6 +1117,7 @@ impl<T> wasi::sockets::tcp::HostTcpSocket for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_start_bind", skip_all, level = Level::TRACE)]
     fn start_bind(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1044,6 +1132,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_finish_bind", skip_all, level = Level::TRACE)]
     fn finish_bind(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1053,6 +1142,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_start_connect", skip_all, level = Level::TRACE)]
     fn start_connect(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1067,6 +1157,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_finish_connect", skip_all, level = Level::TRACE)]
     fn finish_connect(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1077,6 +1168,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_start_listen", skip_all, level = Level::TRACE)]
     fn start_listen(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1086,6 +1178,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_finish_listen", skip_all, level = Level::TRACE)]
     fn finish_listen(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1095,6 +1188,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_accept", skip_all, level = Level::TRACE)]
     fn accept(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1113,6 +1207,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_local_address", skip_all, level = Level::TRACE)]
     fn local_address(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1122,6 +1217,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_remote_address", skip_all, level = Level::TRACE)]
     fn remote_address(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1131,10 +1227,12 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_address_family", skip_all, level = Level::TRACE)]
     fn address_family(&mut self, self_: Resource<TcpSocket>) -> wasmtime::Result<IpAddressFamily> {
         <T as latest::sockets::tcp::HostTcpSocket>::address_family(self, self_).map(|e| e.into())
     }
 
+    #[instrument(name = "wasi_2023_10_18_ipv6_only", skip_all, level = Level::TRACE)]
     fn ipv6_only(
         &mut self,
         _self_: Resource<TcpSocket>,
@@ -1142,6 +1240,7 @@ where
         anyhow::bail!("ipv6-only API no longer supported")
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_ipv6_only", skip_all, level = Level::TRACE)]
     fn set_ipv6_only(
         &mut self,
         _self_: Resource<TcpSocket>,
@@ -1150,6 +1249,7 @@ where
         anyhow::bail!("ipv6-only API no longer supported")
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_listen_backlog_size", skip_all, level = Level::TRACE)]
     fn set_listen_backlog_size(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1160,6 +1260,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_keep_alive", skip_all, level = Level::TRACE)]
     fn keep_alive(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1167,6 +1268,7 @@ where
         convert_result(<T as latest::sockets::tcp::HostTcpSocket>::keep_alive_enabled(self, self_))
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_keep_alive", skip_all, level = Level::TRACE)]
     fn set_keep_alive(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1177,6 +1279,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_no_delay", skip_all, level = Level::TRACE)]
     fn no_delay(
         &mut self,
         _self_: Resource<TcpSocket>,
@@ -1184,6 +1287,7 @@ where
         anyhow::bail!("no-delay API no longer supported")
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_no_delay", skip_all, level = Level::TRACE)]
     fn set_no_delay(
         &mut self,
         _self_: Resource<TcpSocket>,
@@ -1192,6 +1296,7 @@ where
         anyhow::bail!("set-no-delay API no longer supported")
     }
 
+    #[instrument(name = "wasi_2023_10_18_unicast_hop_limit", skip_all, level = Level::TRACE)]
     fn unicast_hop_limit(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1201,6 +1306,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_unicast_hop_limit", skip_all, level = Level::TRACE)]
     fn set_unicast_hop_limit(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1211,6 +1317,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_receive_buffer_size", skip_all, level = Level::TRACE)]
     fn receive_buffer_size(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1218,6 +1325,7 @@ where
         convert_result(<T as latest::sockets::tcp::HostTcpSocket>::receive_buffer_size(self, self_))
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_receive_buffer_size", skip_all, level = Level::TRACE)]
     fn set_receive_buffer_size(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1228,6 +1336,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_send_buffer_size", skip_all, level = Level::TRACE)]
     fn send_buffer_size(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1235,6 +1344,7 @@ where
         convert_result(<T as latest::sockets::tcp::HostTcpSocket>::send_buffer_size(self, self_))
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_send_buffer_size", skip_all, level = Level::TRACE)]
     fn set_send_buffer_size(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1245,10 +1355,12 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_subscribe", skip_all, level = Level::TRACE)]
     fn subscribe(&mut self, self_: Resource<TcpSocket>) -> wasmtime::Result<Resource<Pollable>> {
         <T as latest::sockets::tcp::HostTcpSocket>::subscribe(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_shutdown", skip_all, level = Level::TRACE)]
     fn shutdown(
         &mut self,
         self_: Resource<TcpSocket>,
@@ -1261,6 +1373,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<TcpSocket>) -> wasmtime::Result<()> {
         <T as latest::sockets::tcp::HostTcpSocket>::drop(self, rep)
     }
@@ -1270,6 +1383,7 @@ impl<T> wasi::sockets::tcp_create_socket::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_create_tcp_socket", skip_all, level = Level::TRACE)]
     fn create_tcp_socket(
         &mut self,
         address_family: IpAddressFamily,
@@ -1303,6 +1417,7 @@ pub enum UdpSocket {
 }
 
 impl UdpSocket {
+    #[instrument(name = "wasi_2023_10_18_finish_connect", skip_all, level = Level::TRACE)]
     fn finish_connect<T: WasiView>(
         table: &mut T,
         socket: &Resource<UdpSocket>,
@@ -1337,6 +1452,7 @@ impl UdpSocket {
         Ok(Ok(()))
     }
 
+    #[instrument(name = "wasi_2023_10_18_inner", skip_all, level = Level::TRACE)]
     fn inner(&self) -> wasmtime::Result<Resource<latest::sockets::udp::UdpSocket>> {
         let r = match self {
             UdpSocket::Initial(r) => r,
@@ -1352,6 +1468,7 @@ impl<T> wasi::sockets::udp::HostUdpSocket for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_start_bind", skip_all, level = Level::TRACE)]
     fn start_bind(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1367,6 +1484,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_finish_bind", skip_all, level = Level::TRACE)]
     fn finish_bind(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1377,6 +1495,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_start_connect", skip_all, level = Level::TRACE)]
     fn start_connect(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1392,6 +1511,7 @@ where
         Ok(result)
     }
 
+    #[instrument(name = "wasi_2023_10_18_finish_connect", skip_all, level = Level::TRACE)]
     fn finish_connect(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1399,6 +1519,7 @@ where
         UdpSocket::finish_connect(self, &self_, true)
     }
 
+    #[instrument(name = "wasi_2023_10_18_receive", skip_all, level = Level::TRACE)]
     fn receive(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1432,6 +1553,7 @@ where
         }
     }
 
+    #[instrument(name = "wasi_2023_10_18_send", skip_all, level = Level::TRACE)]
     fn send(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1480,6 +1602,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_local_address", skip_all, level = Level::TRACE)]
     fn local_address(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1490,6 +1613,7 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_remote_address", skip_all, level = Level::TRACE)]
     fn remote_address(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1500,11 +1624,13 @@ where
         ))
     }
 
+    #[instrument(name = "wasi_2023_10_18_address_family", skip_all, level = Level::TRACE)]
     fn address_family(&mut self, self_: Resource<UdpSocket>) -> wasmtime::Result<IpAddressFamily> {
         let socket = self.table().get(&self_)?.inner()?;
         <T as latest::sockets::udp::HostUdpSocket>::address_family(self, socket).map(|e| e.into())
     }
 
+    #[instrument(name = "wasi_2023_10_18_ipv6_only", skip_all, level = Level::TRACE)]
     fn ipv6_only(
         &mut self,
         _self_: Resource<UdpSocket>,
@@ -1512,6 +1638,7 @@ where
         anyhow::bail!("ipv6-only API no longer supported")
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_ipv6_only", skip_all, level = Level::TRACE)]
     fn set_ipv6_only(
         &mut self,
         _self_: Resource<UdpSocket>,
@@ -1520,6 +1647,7 @@ where
         anyhow::bail!("ipv6-only API no longer supported")
     }
 
+    #[instrument(name = "wasi_2023_10_18_unicast_hop_limit", skip_all, level = Level::TRACE)]
     fn unicast_hop_limit(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1528,6 +1656,7 @@ where
         convert_result(<T as latest::sockets::udp::HostUdpSocket>::unicast_hop_limit(self, socket))
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_unicast_hop_limit", skip_all, level = Level::TRACE)]
     fn set_unicast_hop_limit(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1539,6 +1668,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_receive_buffer_size", skip_all, level = Level::TRACE)]
     fn receive_buffer_size(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1549,6 +1679,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_receive_buffer_size", skip_all, level = Level::TRACE)]
     fn set_receive_buffer_size(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1562,6 +1693,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_send_buffer_size", skip_all, level = Level::TRACE)]
     fn send_buffer_size(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1570,6 +1702,7 @@ where
         convert_result(<T as latest::sockets::udp::HostUdpSocket>::send_buffer_size(self, socket))
     }
 
+    #[instrument(name = "wasi_2023_10_18_set_send_buffer_size", skip_all, level = Level::TRACE)]
     fn set_send_buffer_size(
         &mut self,
         self_: Resource<UdpSocket>,
@@ -1581,11 +1714,13 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_subscribe", skip_all, level = Level::TRACE)]
     fn subscribe(&mut self, self_: Resource<UdpSocket>) -> wasmtime::Result<Resource<Pollable>> {
         let socket = self.table().get(&self_)?.inner()?;
         <T as latest::sockets::udp::HostUdpSocket>::subscribe(self, socket)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<UdpSocket>) -> wasmtime::Result<()> {
         let me = self.table().delete(rep)?;
         let socket = match me {
@@ -1610,6 +1745,7 @@ impl<T> wasi::sockets::udp_create_socket::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_create_udp_socket", skip_all, level = Level::TRACE)]
     fn create_udp_socket(
         &mut self,
         address_family: IpAddressFamily,
@@ -1633,6 +1769,7 @@ impl<T> wasi::sockets::instance_network::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_instance_network", skip_all, level = Level::TRACE)]
     fn instance_network(&mut self) -> wasmtime::Result<Resource<Network>> {
         <T as latest::sockets::instance_network::Host>::instance_network(self)
     }
@@ -1644,6 +1781,7 @@ impl<T> wasi::sockets::network::HostNetwork for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<Network>) -> wasmtime::Result<()> {
         <T as latest::sockets::network::HostNetwork>::drop(self, rep)
     }
@@ -1653,6 +1791,7 @@ impl<T> wasi::sockets::ip_name_lookup::Host for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_resolve_addresses", skip_all, level = Level::TRACE)]
     fn resolve_addresses(
         &mut self,
         network: Resource<Network>,
@@ -1670,6 +1809,7 @@ impl<T> wasi::sockets::ip_name_lookup::HostResolveAddressStream for T
 where
     T: WasiView,
 {
+    #[instrument(name = "wasi_2023_10_18_resolve_next_address", skip_all, level = Level::TRACE)]
     fn resolve_next_address(
         &mut self,
         self_: Resource<ResolveAddressStream>,
@@ -1682,6 +1822,7 @@ where
         )
     }
 
+    #[instrument(name = "wasi_2023_10_18_subscribe", skip_all, level = Level::TRACE)]
     fn subscribe(
         &mut self,
         self_: Resource<ResolveAddressStream>,
@@ -1689,6 +1830,7 @@ where
         <T as latest::sockets::ip_name_lookup::HostResolveAddressStream>::subscribe(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: Resource<ResolveAddressStream>) -> wasmtime::Result<()> {
         <T as latest::sockets::ip_name_lookup::HostResolveAddressStream>::drop(self, rep)
     }
@@ -1700,6 +1842,7 @@ impl<T> wasi::http::types::HostFields for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_new", skip_all, level = Level::TRACE)]
     fn new(
         &mut self,
         entries: Vec<(String, Vec<u8>)>,
@@ -1710,6 +1853,7 @@ where
         }
     }
 
+    #[instrument(name = "wasi_2023_10_18_get", skip_all, level = Level::TRACE)]
     fn get(
         &mut self,
         self_: wasmtime::component::Resource<Fields>,
@@ -1718,6 +1862,7 @@ where
         <T as latest::http::types::HostFields>::get(self, self_, name)
     }
 
+    #[instrument(name = "wasi_2023_10_18_set", skip_all, level = Level::TRACE)]
     fn set(
         &mut self,
         self_: wasmtime::component::Resource<Fields>,
@@ -1728,6 +1873,7 @@ where
         Ok(())
     }
 
+    #[instrument(name = "wasi_2023_10_18_delete", skip_all, level = Level::TRACE)]
     fn delete(
         &mut self,
         self_: wasmtime::component::Resource<Fields>,
@@ -1737,6 +1883,7 @@ where
         Ok(())
     }
 
+    #[instrument(name = "wasi_2023_10_18_append", skip_all, level = Level::TRACE)]
     fn append(
         &mut self,
         self_: wasmtime::component::Resource<Fields>,
@@ -1747,6 +1894,7 @@ where
         Ok(())
     }
 
+    #[instrument(name = "wasi_2023_10_18_entries", skip_all, level = Level::TRACE)]
     fn entries(
         &mut self,
         self_: wasmtime::component::Resource<Fields>,
@@ -1754,6 +1902,7 @@ where
         <T as latest::http::types::HostFields>::entries(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_clone", skip_all, level = Level::TRACE)]
     fn clone(
         &mut self,
         self_: wasmtime::component::Resource<Fields>,
@@ -1761,6 +1910,7 @@ where
         <T as latest::http::types::HostFields>::clone(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: wasmtime::component::Resource<Fields>) -> wasmtime::Result<()> {
         <T as latest::http::types::HostFields>::drop(self, rep)
     }
@@ -1770,6 +1920,7 @@ impl<T> wasi::http::types::HostIncomingRequest for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_method", skip_all, level = Level::TRACE)]
     fn method(
         &mut self,
         self_: wasmtime::component::Resource<IncomingRequest>,
@@ -1777,6 +1928,7 @@ where
         <T as latest::http::types::HostIncomingRequest>::method(self, self_).map(|e| e.into())
     }
 
+    #[instrument(name = "wasi_2023_10_18_path_with_query", skip_all, level = Level::TRACE)]
     fn path_with_query(
         &mut self,
         self_: wasmtime::component::Resource<IncomingRequest>,
@@ -1784,6 +1936,7 @@ where
         <T as latest::http::types::HostIncomingRequest>::path_with_query(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_scheme", skip_all, level = Level::TRACE)]
     fn scheme(
         &mut self,
         self_: wasmtime::component::Resource<IncomingRequest>,
@@ -1792,6 +1945,7 @@ where
             .map(|e| e.map(|e| e.into()))
     }
 
+    #[instrument(name = "wasi_2023_10_18_authority", skip_all, level = Level::TRACE)]
     fn authority(
         &mut self,
         self_: wasmtime::component::Resource<IncomingRequest>,
@@ -1799,6 +1953,7 @@ where
         <T as latest::http::types::HostIncomingRequest>::authority(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_headers", skip_all, level = Level::TRACE)]
     fn headers(
         &mut self,
         self_: wasmtime::component::Resource<IncomingRequest>,
@@ -1806,6 +1961,7 @@ where
         <T as latest::http::types::HostIncomingRequest>::headers(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_consume", skip_all, level = Level::TRACE)]
     fn consume(
         &mut self,
         self_: wasmtime::component::Resource<IncomingRequest>,
@@ -1813,6 +1969,7 @@ where
         <T as latest::http::types::HostIncomingRequest>::consume(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(
         &mut self,
         rep: wasmtime::component::Resource<IncomingRequest>,
@@ -1825,6 +1982,7 @@ impl<T> wasi::http::types::HostIncomingResponse for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_status", skip_all, level = Level::TRACE)]
     fn status(
         &mut self,
         self_: wasmtime::component::Resource<IncomingResponse>,
@@ -1832,6 +1990,7 @@ where
         <T as latest::http::types::HostIncomingResponse>::status(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_headers", skip_all, level = Level::TRACE)]
     fn headers(
         &mut self,
         self_: wasmtime::component::Resource<IncomingResponse>,
@@ -1839,6 +1998,7 @@ where
         <T as latest::http::types::HostIncomingResponse>::headers(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_consume", skip_all, level = Level::TRACE)]
     fn consume(
         &mut self,
         self_: wasmtime::component::Resource<IncomingResponse>,
@@ -1846,6 +2006,7 @@ where
         <T as latest::http::types::HostIncomingResponse>::consume(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(
         &mut self,
         rep: wasmtime::component::Resource<IncomingResponse>,
@@ -1858,6 +2019,7 @@ impl<T> wasi::http::types::HostIncomingBody for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_stream", skip_all, level = Level::TRACE)]
     fn stream(
         &mut self,
         self_: wasmtime::component::Resource<IncomingBody>,
@@ -1865,6 +2027,7 @@ where
         <T as latest::http::types::HostIncomingBody>::stream(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_finish", skip_all, level = Level::TRACE)]
     fn finish(
         &mut self,
         this: wasmtime::component::Resource<IncomingBody>,
@@ -1872,6 +2035,7 @@ where
         <T as latest::http::types::HostIncomingBody>::finish(self, this)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: wasmtime::component::Resource<IncomingBody>) -> wasmtime::Result<()> {
         <T as latest::http::types::HostIncomingBody>::drop(self, rep)
     }
@@ -1881,6 +2045,7 @@ impl<T> wasi::http::types::HostOutgoingRequest for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_new", skip_all, level = Level::TRACE)]
     fn new(
         &mut self,
         method: Method,
@@ -1939,6 +2104,7 @@ where
         Ok(request)
     }
 
+    #[instrument(name = "wasi_2023_10_18_write", skip_all, level = Level::TRACE)]
     fn write(
         &mut self,
         self_: wasmtime::component::Resource<OutgoingRequest>,
@@ -1946,6 +2112,7 @@ where
         <T as latest::http::types::HostOutgoingRequest>::body(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(
         &mut self,
         rep: wasmtime::component::Resource<OutgoingRequest>,
@@ -1958,6 +2125,7 @@ impl<T> wasi::http::types::HostOutgoingResponse for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_new", skip_all, level = Level::TRACE)]
     fn new(
         &mut self,
         status_code: StatusCode,
@@ -1979,6 +2147,7 @@ where
         Ok(response)
     }
 
+    #[instrument(name = "wasi_2023_10_18_write", skip_all, level = Level::TRACE)]
     fn write(
         &mut self,
         self_: wasmtime::component::Resource<OutgoingResponse>,
@@ -1986,6 +2155,7 @@ where
         <T as latest::http::types::HostOutgoingResponse>::body(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(
         &mut self,
         rep: wasmtime::component::Resource<OutgoingResponse>,
@@ -1998,6 +2168,7 @@ impl<T> wasi::http::types::HostOutgoingBody for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_write", skip_all, level = Level::TRACE)]
     fn write(
         &mut self,
         self_: wasmtime::component::Resource<OutgoingBody>,
@@ -2005,6 +2176,7 @@ where
         <T as latest::http::types::HostOutgoingBody>::write(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_finish", skip_all, level = Level::TRACE)]
     fn finish(
         &mut self,
         this: wasmtime::component::Resource<OutgoingBody>,
@@ -2014,6 +2186,7 @@ where
         Ok(())
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: wasmtime::component::Resource<OutgoingBody>) -> wasmtime::Result<()> {
         <T as latest::http::types::HostOutgoingBody>::drop(self, rep)
     }
@@ -2023,6 +2196,7 @@ impl<T> wasi::http::types::HostResponseOutparam for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_set", skip_all, level = Level::TRACE)]
     fn set(
         &mut self,
         param: wasmtime::component::Resource<ResponseOutparam>,
@@ -2043,6 +2217,7 @@ where
         <T as latest::http::types::HostResponseOutparam>::set(self, param, response)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(
         &mut self,
         rep: wasmtime::component::Resource<ResponseOutparam>,
@@ -2055,6 +2230,7 @@ impl<T> wasi::http::types::HostFutureTrailers for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_subscribe", skip_all, level = Level::TRACE)]
     fn subscribe(
         &mut self,
         self_: wasmtime::component::Resource<FutureTrailers>,
@@ -2062,6 +2238,7 @@ where
         <T as latest::http::types::HostFutureTrailers>::subscribe(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_get", skip_all, level = Level::TRACE)]
     fn get(
         &mut self,
         self_: wasmtime::component::Resource<FutureTrailers>,
@@ -2077,6 +2254,7 @@ where
         }
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(&mut self, rep: wasmtime::component::Resource<FutureTrailers>) -> wasmtime::Result<()> {
         <T as latest::http::types::HostFutureTrailers>::drop(self, rep)
     }
@@ -2086,6 +2264,7 @@ impl<T> wasi::http::types::HostFutureIncomingResponse for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_get", skip_all, level = Level::TRACE)]
     fn get(
         &mut self,
         self_: wasmtime::component::Resource<FutureIncomingResponse>,
@@ -2100,6 +2279,7 @@ where
         }
     }
 
+    #[instrument(name = "wasi_2023_10_18_subscribe", skip_all, level = Level::TRACE)]
     fn subscribe(
         &mut self,
         self_: wasmtime::component::Resource<FutureIncomingResponse>,
@@ -2107,6 +2287,7 @@ where
         <T as latest::http::types::HostFutureIncomingResponse>::subscribe(self, self_)
     }
 
+    #[instrument(name = "wasi_2023_10_18_drop", skip_all, level = Level::TRACE)]
     fn drop(
         &mut self,
         rep: wasmtime::component::Resource<FutureIncomingResponse>,
@@ -2119,6 +2300,7 @@ impl<T> wasi::http::outgoing_handler::Host for T
 where
     T: WasiHttpView,
 {
+    #[instrument(name = "wasi_2023_10_18_handle", skip_all, level = Level::TRACE)]
     fn handle(
         &mut self,
         request: wasmtime::component::Resource<OutgoingRequest>,
@@ -2184,6 +2366,7 @@ where
     }
 }
 
+#[instrument(name = "wasi_2023_10_18_convert_result", skip_all, level = Level::TRACE)]
 pub fn convert_result<T, T2, E, E2>(
     result: Result<T, TrappableError<E>>,
 ) -> wasmtime::Result<Result<T2, E2>>
@@ -2198,6 +2381,7 @@ where
     }
 }
 
+#[instrument(name = "wasi_2023_10_18_convert_stream_result", skip_all, level = Level::TRACE)]
 fn convert_stream_result<T, T2>(
     view: &mut dyn WasiView,
     result: Result<T, wasmtime_wasi::preview2::StreamError>,
