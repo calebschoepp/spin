@@ -6437,6 +6437,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "spin-observe"
+version = "2.5.0-pre0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "dotenvy",
+ "once_cell",
+ "serde",
+ "spin-app",
+ "spin-core",
+ "spin-expressions",
+ "spin-world",
+ "table",
+ "thiserror",
+ "tokio",
+ "toml 0.5.11",
+ "tracing",
+ "vaultrs",
+]
+
+[[package]]
 name = "spin-oci"
 version = "2.5.0-pre0"
 dependencies = [
@@ -6628,26 +6649,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "spin-tracing"
-version = "2.4.0-pre0"
-dependencies = [
- "anyhow",
- "async-trait",
- "dotenvy",
- "once_cell",
- "serde",
- "spin-app",
- "spin-core",
- "spin-expressions",
- "spin-world",
- "table",
- "thiserror",
- "tokio",
- "toml 0.5.11",
- "vaultrs",
-]
-
-[[package]]
 name = "spin-trigger"
 version = "2.5.0-pre0"
 dependencies = [
@@ -6681,11 +6682,11 @@ dependencies = [
  "spin-llm-remote-http",
  "spin-loader",
  "spin-manifest",
+ "spin-observe",
  "spin-outbound-networking",
  "spin-sqlite",
  "spin-sqlite-inproc",
  "spin-sqlite-libsql",
- "spin-tracing",
  "spin-variables",
  "spin-world",
  "tempfile",

@@ -208,7 +208,7 @@ impl<Executor: TriggerExecutor> TriggerExecutorBuilder<Executor> {
                 )?;
                 self.loader.add_dynamic_host_component(
                     &mut builder,
-                    spin_tracing::TracingHostComponent::new(),
+                    spin_observe::ObserveHostComponent::new(),
                 )?;
             }
 
