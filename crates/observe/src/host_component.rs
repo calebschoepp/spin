@@ -48,7 +48,8 @@ impl observe::Host for ObserveData {}
 #[async_trait]
 impl observe::HostSpan for ObserveData {
     async fn enter(&mut self, name: String) -> Result<Resource<WitSpan>> {
-        let span = tracing::info_span!("lame");
+        println!("ENTER\n\n");
+        let span = tracing::info_span!("lame_name", "otel.name" = name);
         span.with_subscriber(|(id, dispatch)| {
             dispatch.enter(id);
         });
@@ -58,8 +59,10 @@ impl observe::HostSpan for ObserveData {
     }
 
     async fn close(&mut self, resource: Resource<WitSpan>) -> Result<()> {
+        println!("CLOSE\n\n");
         // Actually close the otel span
         if let Some(thingy) = self.spans.get(resource.rep()) {
+            println!("Actually closing something");
             thingy.inner.with_subscriber(|(id, dispatch)| {
                 dispatch.exit(id);
             });
