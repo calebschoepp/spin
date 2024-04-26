@@ -10,6 +10,9 @@ mod traces;
 pub use propagation::extract_trace_context;
 pub use propagation::inject_trace_context;
 
+pub use opentelemetry;
+pub use tracing_opentelemetry;
+
 /// Initializes telemetry for Spin using the [tracing] library.
 ///
 /// Under the hood this involves initializing a [tracing::Subscriber] with multiple [Layer]s. One

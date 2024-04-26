@@ -6448,6 +6448,7 @@ dependencies = [
  "spin-app",
  "spin-core",
  "spin-expressions",
+ "spin-telemetry",
  "spin-world",
  "table",
  "thiserror",
