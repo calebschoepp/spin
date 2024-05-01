@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use anyhow::Result;
 use spin_app::{AppComponent, DynamicHostComponent};
 use spin_core::wasmtime::component::Resource;
@@ -5,6 +7,8 @@ use spin_core::{async_trait, HostComponent};
 use spin_world::v2::observe;
 use spin_world::v2::observe::Span as WitSpan;
 use tracing::span::EnteredSpan;
+
+use crate::future::ActiveSpans;
 
 pub struct ObserveHostComponent {}
 
@@ -26,7 +30,8 @@ impl HostComponent for ObserveHostComponent {
 
     fn build_data(&self) -> Self::Data {
         ObserveData {
-            spans: table::Table::new(1024),
+            span_resources: table::Table::new(1024),
+            active_spans: Default::default(),
         }
     }
 }
@@ -39,7 +44,8 @@ impl DynamicHostComponent for ObserveHostComponent {
 
 /// TODO
 pub struct ObserveData {
-    spans: table::Table<Span>,
+    span_resources: table::Table<Span>,
+    pub(crate) active_spans: ActiveSpans,
 }
 
 #[async_trait]
@@ -54,14 +60,17 @@ impl observe::HostSpan for ObserveData {
             dispatch.enter(id);
         });
 
-        let resource_id = self.spans.push(Span { name, inner: span }).unwrap();
+        let resource_id = self
+            .span_resources
+            .push(Span { name, inner: span })
+            .unwrap();
         Ok(Resource::new_own(resource_id))
     }
 
     async fn close(&mut self, resource: Resource<WitSpan>) -> Result<()> {
         println!("CLOSE\n\n");
         // Actually close the otel span
-        if let Some(thingy) = self.spans.get(resource.rep()) {
+        if let Some(thingy) = self.span_resources.get(resource.rep()) {
             println!("Actually closing something");
             thingy.inner.with_subscriber(|(id, dispatch)| {
                 dispatch.exit(id);
@@ -73,7 +82,7 @@ impl observe::HostSpan for ObserveData {
 
     fn drop(&mut self, resource: Resource<WitSpan>) -> Result<()> {
         // TODO: Make sure span ended
-        self.spans.remove(resource.rep()).unwrap();
+        self.span_resources.remove(resource.rep()).unwrap();
         Ok(())
     }
 }

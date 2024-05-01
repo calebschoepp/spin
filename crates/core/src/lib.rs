@@ -407,7 +407,9 @@ impl<T: OutboundWasiHttpHandler + Send + Sync> Engine<T> {
         let inner = self.module_linker.instantiate_pre(module)?;
         Ok(ModuleInstancePre { inner })
     }
+}
 
+impl<T> Engine<T> {
     /// Find the [`HostComponentDataHandle`] for a [`HostComponent`] if configured for this engine.
     pub fn find_host_component_handle<HC: HostComponent>(
         &self,

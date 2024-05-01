@@ -13,6 +13,7 @@ use spin_core::wasi_2023_10_18::exports::wasi::http::incoming_handler::Guest as 
 use spin_core::wasi_2023_11_10::exports::wasi::http::incoming_handler::Guest as IncomingHandler2023_11_10;
 use spin_core::Instance;
 use spin_http::body;
+use spin_observe::future::{FutureExt, ObserveContext};
 use spin_trigger::TriggerAppEngine;
 use spin_world::v1::http_types;
 use std::sync::Arc;
@@ -47,15 +48,32 @@ impl HttpExecutor for HttpHandlerExecutor {
 
         set_http_origin_from_request(&mut store, engine.clone(), self, &req);
 
+        let observe_context = ObserveContext::new(&mut store, &engine.engine)?;
+
         let resp = match HandlerType::from_exports(instance.exports(&mut store)) {
             Some(HandlerType::Wasi) => {
-                Self::execute_wasi(store, instance, base, raw_route, req, client_addr).await?
+                Self::execute_wasi(
+                    store,
+                    observe_context,
+                    instance,
+                    base,
+                    raw_route,
+                    req,
+                    client_addr,
+                )
+                .await?
             }
-            Some(HandlerType::Spin) => {
-                Self::execute_spin(store, instance, base, raw_route, req, client_addr)
-                    .await
-                    .map_err(contextualise_err)?
-            }
+            Some(HandlerType::Spin) => Self::execute_spin(
+                store,
+                observe_context,
+                instance,
+                base,
+                raw_route,
+                req,
+                client_addr,
+            )
+            .await
+            .map_err(contextualise_err)?,
             None => bail!(
                 "Expected component to either export `{WASI_HTTP_EXPORT_2023_10_18}`, \
                  `{WASI_HTTP_EXPORT_2023_11_10}`, `{WASI_HTTP_EXPORT_0_2_0}`, \
@@ -74,6 +92,7 @@ impl HttpExecutor for HttpHandlerExecutor {
 impl HttpHandlerExecutor {
     pub async fn execute_spin(
         mut store: Store,
+        observe_context: ObserveContext,
         instance: Instance,
         base: &str,
         raw_route: &str,
@@ -117,7 +136,10 @@ impl HttpHandlerExecutor {
             body: Some(bytes),
         };
 
-        let (resp,) = func.call_async(&mut store, (req,)).await?;
+        let (resp,) = func
+            .call_async(&mut store, (req,))
+            .instrument_rename(observe_context)?
+            .await?;
 
         if resp.status < 100 || resp.status > 600 {
             tracing::error!("malformed HTTP status code");
@@ -154,6 +176,7 @@ impl HttpHandlerExecutor {
 
     async fn execute_wasi(
         mut store: Store,
+        observe_context: ObserveContext,
         instance: Instance,
         base: &str,
         raw_route: &str,
@@ -220,18 +243,21 @@ impl HttpHandlerExecutor {
                         proxy
                             .wasi_http_incoming_handler()
                             .call_handle(&mut store, request, response)
+                            .instrument_rename(observe_context)?
                             .instrument(span)
                             .await
                     }
                     Handler::Handler2023_10_18(proxy) => {
                         proxy
                             .call_handle(&mut store, request, response)
+                            .instrument_rename(observe_context)?
                             .instrument(span)
                             .await
                     }
                     Handler::Handler2023_11_10(proxy) => {
                         proxy
                             .call_handle(&mut store, request, response)
+                            .instrument_rename(observe_context)?
                             .instrument(span)
                             .await
                     }

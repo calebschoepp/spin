@@ -6724,6 +6724,7 @@ dependencies = [
  "spin-app",
  "spin-core",
  "spin-http",
+ "spin-observe",
  "spin-outbound-networking",
  "spin-telemetry",
  "spin-testing",
