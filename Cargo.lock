@@ -6444,6 +6444,7 @@ dependencies = [
  "async-trait",
  "dotenvy",
  "once_cell",
+ "pin-project-lite",
  "serde",
  "spin-app",
  "spin-core",

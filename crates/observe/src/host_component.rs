@@ -1,4 +1,5 @@
 use std::future::Future;
+use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use spin_app::{AppComponent, DynamicHostComponent};
@@ -7,8 +8,6 @@ use spin_core::{async_trait, HostComponent};
 use spin_world::v2::observe;
 use spin_world::v2::observe::Span as WitSpan;
 use tracing::span::EnteredSpan;
-
-use crate::future::ActiveSpans;
 
 pub struct ObserveHostComponent {}
 
@@ -30,8 +29,10 @@ impl HostComponent for ObserveHostComponent {
 
     fn build_data(&self) -> Self::Data {
         ObserveData {
-            span_resources: table::Table::new(1024),
-            active_spans: Default::default(),
+            state: Arc::new(RwLock::new(State {
+                span_resources: table::Table::new(1024),
+                active_spans: Default::default(),
+            })),
         }
     }
 }
@@ -44,50 +45,106 @@ impl DynamicHostComponent for ObserveHostComponent {
 
 /// TODO
 pub struct ObserveData {
-    span_resources: table::Table<Span>,
-    pub(crate) active_spans: ActiveSpans,
+    pub(crate) state: Arc<RwLock<State>>,
 }
 
 #[async_trait]
 impl observe::Host for ObserveData {}
 
+pub(crate) struct State {
+    pub span_resources: table::Table<GuestSpan>,
+    pub active_spans: Vec<u32>,
+}
+
+impl State {
+    /// TODO: Both exits the guest spans and removes them from active_spans in reverse order to index
+    pub fn close_back_to(&mut self, index: usize) {
+        self.active_spans
+            .split_off(index)
+            .iter()
+            .rev()
+            .for_each(|id| {
+                if let Some(guest_span) = self.span_resources.get(*id) {
+                    guest_span.exit();
+                } else {
+                    tracing::error!("adsf");
+                }
+            });
+    }
+}
+
 #[async_trait]
 impl observe::HostSpan for ObserveData {
     async fn enter(&mut self, name: String) -> Result<Resource<WitSpan>> {
-        println!("ENTER\n\n");
+        println!("Entering {name:?}");
         let span = tracing::info_span!("lame_name", "otel.name" = name);
-        span.with_subscriber(|(id, dispatch)| {
-            dispatch.enter(id);
-        });
+        let guest_span = GuestSpan {
+            name: name.clone(),
+            inner: span,
+        };
+        guest_span.enter();
 
-        let resource_id = self
-            .span_resources
-            .push(Span { name, inner: span })
-            .unwrap();
+        let mut state = self.state.write().unwrap();
+
+        let resource_id = state.span_resources.push(guest_span).unwrap();
+
+        state.active_spans.push(resource_id);
+
         Ok(Resource::new_own(resource_id))
     }
 
     async fn close(&mut self, resource: Resource<WitSpan>) -> Result<()> {
-        println!("CLOSE\n\n");
-        // Actually close the otel span
-        if let Some(thingy) = self.span_resources.get(resource.rep()) {
-            println!("Actually closing something");
-            thingy.inner.with_subscriber(|(id, dispatch)| {
-                dispatch.exit(id);
-            });
+        println!("Closing");
+        let mut state: std::sync::RwLockWriteGuard<State> = self.state.write().unwrap();
+
+        if let Some(index) = state
+            .active_spans
+            .iter()
+            .rposition(|id| *id == resource.rep())
+        {
+            state.close_back_to(index);
+        } else {
+            tracing::error!("did not find span to close")
         }
 
         Ok(())
     }
 
     fn drop(&mut self, resource: Resource<WitSpan>) -> Result<()> {
-        // TODO: Make sure span ended
-        self.span_resources.remove(resource.rep()).unwrap();
+        let mut state: std::sync::RwLockWriteGuard<State> = self.state.write().unwrap();
+
+        if let Some(index) = state
+            .active_spans
+            .iter()
+            .rposition(|id| *id == resource.rep())
+        {
+            state.close_back_to(index);
+        } else {
+            tracing::error!("did not find span to close")
+        }
+
+        state.span_resources.remove(resource.rep()).unwrap();
         Ok(())
     }
 }
 
-struct Span {
-    name: String,
-    inner: tracing::Span,
+pub struct GuestSpan {
+    pub name: String,
+    pub inner: tracing::Span,
+}
+
+// Necessary because of phantom don't send
+
+impl GuestSpan {
+    pub fn enter(&self) {
+        self.inner.with_subscriber(|(id, dispatch)| {
+            dispatch.enter(id);
+        });
+    }
+
+    pub fn exit(&self) {
+        self.inner.with_subscriber(|(id, dispatch)| {
+            dispatch.exit(id);
+        });
+    }
 }
