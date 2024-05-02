@@ -57,38 +57,21 @@ impl<F: Future> Future for Instrumented<F> {
 
         // Enter the active spans before entering the inner poll
         {
-            let state = this.observe_context.state.write().unwrap();
-
-            // TODO: Make it a method on state
-            for guest_span_id in state.active_spans.iter() {
-                if let Some(span_resource) = state.guest_spans.get(*guest_span_id) {
-                    span_resource.enter();
-                } else {
-                    tracing::error!("No span to enter")
-                }
-            }
+            this.observe_context.state.write().unwrap().enter_all();
         }
 
         let ret = this.inner.poll(cx);
 
         // Exit the active spans after exiting the inner poll
         {
-            let state = this.observe_context.state.write().unwrap();
-
-            // TODO: Make it a method on state
-            for span_id in state.active_spans.iter().rev() {
-                if let Some(span_resource) = state.guest_spans.get(*span_id) {
-                    span_resource.exit();
-                } else {
-                    tracing::error!("span already dropped")
-                }
-            }
+            this.observe_context.state.write().unwrap().exit_all();
         }
 
         ret
     }
 }
 
+/// The context necessary for the observe host component to function.
 pub struct ObserveContext {
     state: Arc<RwLock<State>>,
 }
@@ -107,8 +90,6 @@ impl ObserveContext {
     }
 
     fn drop_all(&self) {
-        let mut state: std::sync::RwLockWriteGuard<State> = self.state.write().unwrap();
-
-        state.close_from_back_to(0);
+        self.state.write().unwrap().close_from_back_to(0);
     }
 }

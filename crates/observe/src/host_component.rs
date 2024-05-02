@@ -120,7 +120,7 @@ pub(crate) struct State {
 impl State {
     /// Close all active spans from the top of the stack to the given index. Closing entails exiting
     /// the inner [tracing] span and removing it from the active spans stack.
-    pub fn close_from_back_to(&mut self, index: usize) {
+    pub(crate) fn close_from_back_to(&mut self, index: usize) {
         self.active_spans
             .split_off(index)
             .iter()
@@ -132,6 +132,28 @@ impl State {
                     tracing::debug!("active_span {id:?} already removed from resource table");
                 }
             });
+    }
+
+    /// Enter the inner [tracing] span for all active spans.
+    pub(crate) fn enter_all(&self) {
+        for guest_span_id in self.active_spans.iter() {
+            if let Some(span_resource) = self.guest_spans.get(*guest_span_id) {
+                span_resource.enter();
+            } else {
+                tracing::debug!("guest span already dropped")
+            }
+        }
+    }
+
+    /// Exit the inner [tracing] span for all active spans.
+    pub(crate) fn exit_all(&self) {
+        for guest_span_id in self.active_spans.iter().rev() {
+            if let Some(span_resource) = self.guest_spans.get(*guest_span_id) {
+                span_resource.exit();
+            } else {
+                tracing::debug!("guest span already dropped")
+            }
+        }
     }
 }
 
