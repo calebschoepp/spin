@@ -1,4 +1,3 @@
-use std::future::Future;
 use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
@@ -7,11 +6,11 @@ use spin_core::wasmtime::component::Resource;
 use spin_core::{async_trait, HostComponent};
 use spin_world::v2::observe;
 use spin_world::v2::observe::Span as WitSpan;
-use tracing::span::EnteredSpan;
 
 pub struct ObserveHostComponent {}
 
 impl ObserveHostComponent {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {}
     }
@@ -30,7 +29,7 @@ impl HostComponent for ObserveHostComponent {
     fn build_data(&self) -> Self::Data {
         ObserveData {
             state: Arc::new(RwLock::new(State {
-                span_resources: table::Table::new(1024),
+                guest_spans: table::Table::new(1024),
                 active_spans: Default::default(),
             })),
         }
@@ -38,12 +37,11 @@ impl HostComponent for ObserveHostComponent {
 }
 
 impl DynamicHostComponent for ObserveHostComponent {
-    fn update_data(&self, _data: &mut Self::Data, component: &AppComponent) -> anyhow::Result<()> {
+    fn update_data(&self, _data: &mut Self::Data, _component: &AppComponent) -> anyhow::Result<()> {
         Ok(())
     }
 }
 
-/// TODO
 pub struct ObserveData {
     pub(crate) state: Arc<RwLock<State>>,
 }
@@ -51,66 +49,45 @@ pub struct ObserveData {
 #[async_trait]
 impl observe::Host for ObserveData {}
 
-pub(crate) struct State {
-    pub span_resources: table::Table<GuestSpan>,
-    pub active_spans: Vec<u32>,
-}
-
-impl State {
-    /// TODO: Both exits the guest spans and removes them from active_spans in reverse order to index
-    pub fn close_back_to(&mut self, index: usize) {
-        self.active_spans
-            .split_off(index)
-            .iter()
-            .rev()
-            .for_each(|id| {
-                if let Some(guest_span) = self.span_resources.get(*id) {
-                    guest_span.exit();
-                } else {
-                    tracing::error!("adsf");
-                }
-            });
-    }
-}
-
 #[async_trait]
 impl observe::HostSpan for ObserveData {
     async fn enter(&mut self, name: String) -> Result<Resource<WitSpan>> {
-        println!("Entering {name:?}");
-        let span = tracing::info_span!("lame_name", "otel.name" = name);
+        // Create the underlying tracing span
+        let tracing_span = tracing::info_span!("WASI Observe guest", "otel.name" = name);
+
+        // Wrap it in a GuestSpan for our own bookkeeping purposes and enter it
         let guest_span = GuestSpan {
             name: name.clone(),
-            inner: span,
+            inner: tracing_span,
         };
         guest_span.enter();
 
+        // Put the GuestSpan in our resource table and push it to our stack of active spans
         let mut state = self.state.write().unwrap();
-
-        let resource_id = state.span_resources.push(guest_span).unwrap();
-
+        let resource_id = state.guest_spans.push(guest_span).unwrap();
         state.active_spans.push(resource_id);
 
         Ok(Resource::new_own(resource_id))
     }
 
     async fn close(&mut self, resource: Resource<WitSpan>) -> Result<()> {
-        println!("Closing");
-        let mut state: std::sync::RwLockWriteGuard<State> = self.state.write().unwrap();
-
-        if let Some(index) = state
-            .active_spans
-            .iter()
-            .rposition(|id| *id == resource.rep())
-        {
-            state.close_back_to(index);
-        } else {
-            tracing::error!("did not find span to close")
-        }
-
+        self.safely_close(resource, false);
         Ok(())
     }
 
     fn drop(&mut self, resource: Resource<WitSpan>) -> Result<()> {
+        self.safely_close(resource, true);
+        Ok(())
+    }
+}
+
+impl ObserveData {
+    /// Close the span associated with the given resource and optionally drop the resource
+    /// from the table. Additionally close any other active spans that are more recent on the stack
+    /// in reverse order.
+    ///
+    /// Exiting any spans that were already closed will not cause this to error.
+    fn safely_close(&mut self, resource: Resource<WitSpan>, drop_resource: bool) {
         let mut state: std::sync::RwLockWriteGuard<State> = self.state.write().unwrap();
 
         if let Some(index) = state
@@ -118,30 +95,63 @@ impl observe::HostSpan for ObserveData {
             .iter()
             .rposition(|id| *id == resource.rep())
         {
-            state.close_back_to(index);
+            state.close_from_back_to(index);
         } else {
-            tracing::error!("did not find span to close")
+            tracing::debug!("found no active spans to close")
         }
 
-        state.span_resources.remove(resource.rep()).unwrap();
-        Ok(())
+        if drop_resource {
+            state.guest_spans.remove(resource.rep()).unwrap();
+        }
     }
 }
 
-pub struct GuestSpan {
-    pub name: String,
-    pub inner: tracing::Span,
+/// Internal state of the observe host component.
+pub(crate) struct State {
+    /// A resource table that holds the guest spans.
+    pub guest_spans: table::Table<GuestSpan>,
+    /// A LIFO stack of guest spans that are currently active.
+    ///
+    /// Only a reference ID to the guest span is held here. The actual guest span must be looked up
+    /// in the `guest_spans` table using the reference ID.
+    pub active_spans: Vec<u32>,
 }
 
-// Necessary because of phantom don't send
+impl State {
+    /// Close all active spans from the top of the stack to the given index. Closing entails exiting
+    /// the inner [tracing] span and removing it from the active spans stack.
+    pub fn close_from_back_to(&mut self, index: usize) {
+        self.active_spans
+            .split_off(index)
+            .iter()
+            .rev()
+            .for_each(|id| {
+                if let Some(guest_span) = self.guest_spans.get(*id) {
+                    guest_span.exit();
+                } else {
+                    tracing::debug!("active_span {id:?} already removed from resource table");
+                }
+            });
+    }
+}
 
+/// The WIT resource Span. Effectively wraps a [tracing] span.
+pub struct GuestSpan {
+    /// The [tracing] span we use to do the actual tracing work.
+    pub inner: tracing::Span,
+    pub name: String,
+}
+
+// Note: We use tracing enter instead of Entered because Entered is not Send
 impl GuestSpan {
+    /// Enter the inner [tracing] span.
     pub fn enter(&self) {
         self.inner.with_subscriber(|(id, dispatch)| {
             dispatch.enter(id);
         });
     }
 
+    /// Exits the inner [tracing] span.
     pub fn exit(&self) {
         self.inner.with_subscriber(|(id, dispatch)| {
             dispatch.exit(id);

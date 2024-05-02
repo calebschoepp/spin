@@ -138,7 +138,7 @@ impl HttpHandlerExecutor {
 
         let (resp,) = func
             .call_async(&mut store, (req,))
-            .instrument_rename(observe_context)?
+            .manage_guest_spans(observe_context)?
             .await?;
 
         if resp.status < 100 || resp.status > 600 {
@@ -243,21 +243,21 @@ impl HttpHandlerExecutor {
                         proxy
                             .wasi_http_incoming_handler()
                             .call_handle(&mut store, request, response)
-                            .instrument_rename(observe_context)?
+                            .manage_guest_spans(observe_context)?
                             .instrument(span)
                             .await
                     }
                     Handler::Handler2023_10_18(proxy) => {
                         proxy
                             .call_handle(&mut store, request, response)
-                            .instrument_rename(observe_context)?
+                            .manage_guest_spans(observe_context)?
                             .instrument(span)
                             .await
                     }
                     Handler::Handler2023_11_10(proxy) => {
                         proxy
                             .call_handle(&mut store, request, response)
-                            .instrument_rename(observe_context)?
+                            .manage_guest_spans(observe_context)?
                             .instrument(span)
                             .await
                     }

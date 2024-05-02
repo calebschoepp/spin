@@ -24,14 +24,15 @@ pin_project! {
 }
 
 pub trait FutureExt: Future + Sized {
-    fn instrument_rename(
+    /// Manage WASI Observe guest spans.
+    fn manage_guest_spans(
         self,
         observe_context: ObserveContext,
     ) -> Result<impl Future<Output = Self::Output>>;
 }
 
 impl<F: Future> FutureExt for F {
-    fn instrument_rename(
+    fn manage_guest_spans(
         self,
         observe_context: ObserveContext,
     ) -> Result<impl Future<Output = Self::Output>> {
@@ -45,18 +46,22 @@ impl<F: Future> FutureExt for F {
 impl<F: Future> Future for Instrumented<F> {
     type Output = F::Output;
 
+    /// Maintains the invariant that all active spans are entered before polling the inner future
+    /// and exited otherwise. If we don't do this then the timing (among many other things) of the
+    /// spans becomes wildly incorrect.
     fn poll(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
         let this = self.project();
+
+        // Enter the active spans before entering the inner poll
         {
             let state = this.observe_context.state.write().unwrap();
 
             // TODO: Make it a method on state
-            for span_id in state.active_spans.iter() {
-                println!("Attempting to enter {span_id:?}");
-                if let Some(span_resource) = state.span_resources.get(*span_id) {
+            for guest_span_id in state.active_spans.iter() {
+                if let Some(span_resource) = state.guest_spans.get(*guest_span_id) {
                     span_resource.enter();
                 } else {
                     tracing::error!("No span to enter")
@@ -66,14 +71,13 @@ impl<F: Future> Future for Instrumented<F> {
 
         let ret = this.inner.poll(cx);
 
+        // Exit the active spans after exiting the inner poll
         {
             let state = this.observe_context.state.write().unwrap();
 
             // TODO: Make it a method on state
             for span_id in state.active_spans.iter().rev() {
-                println!("Attempting to exit {span_id:?}");
-
-                if let Some(span_resource) = state.span_resources.get(*span_id) {
+                if let Some(span_resource) = state.guest_spans.get(*span_id) {
                     span_resource.exit();
                 } else {
                     tracing::error!("span already dropped")
@@ -105,13 +109,6 @@ impl ObserveContext {
     fn drop_all(&self) {
         let mut state: std::sync::RwLockWriteGuard<State> = self.state.write().unwrap();
 
-        state.close_back_to(0);
+        state.close_from_back_to(0);
     }
 }
-
-// TODO: Rename everything
-
-// Problems we need to fix
-// - Cancelling future
-// - Guest mismanages inner spans
-// - Guest mismanages outer span and holds it in global state
