@@ -9,9 +9,11 @@ anyhow = { workspace = true }
 indexmap = "2.2.6"
 opentelemetry = { workspace = true }
 opentelemetry_sdk = { workspace = true }
+opentelemetry-otlp = { version = "0.27", features = ["http-proto", "http", "reqwest-client"] }
 spin-core = { path = "../core" }
 spin-factors = { path = "../factors" }
 spin-resource-table = { path = "../table" }
+spin-telemetry = { path = "../telemetry" }
 spin-world = { path = "../world" }
 tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }

@@ -7919,10 +7919,12 @@ dependencies = [
  "anyhow",
  "indexmap 2.7.1",
  "opentelemetry 0.27.0",
+ "opentelemetry-otlp 0.27.0",
  "opentelemetry_sdk 0.27.0",
  "spin-core",
  "spin-factors",
  "spin-resource-table",
+ "spin-telemetry",
  "spin-world",
  "toml 0.5.11",
  "tracing",
@@ -8637,6 +8639,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "opentelemetry 0.27.0",
+ "opentelemetry_sdk 0.27.0",
  "wasmtime",
 ]
 

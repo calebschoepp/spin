@@ -1,54 +1,54 @@
-interface tracer {
+interface tracing {
     use wasi:clocks/wall-clock@0.2.0.{datetime};
 
-    /// Starts a new `span` with the given name and options.
-    start: func(name: string, options: option<start-options>) -> span;
+    /// TODO
+    on-start: func(span: span-data, parent: span-context);
 
-    /// Represents a unit of work or operation.
-    resource span {
-        /// Get the `span-context` for this `span`.
-        span-context: func() -> span-context;
+    /// TODO
+    on-end: func(span: span-data);
 
-        /// Returns true when the data provided to this `span` is captured in some form. If it returns false then any data provided is discarded.
-        is-recording: func() -> bool;
+    /// TODO
+    current-span-context: func() -> span-context;
 
-        /// Set attributes of this span.
-        ///
-        /// If a key already exists for an attribute of the Span it will be overwritten with the corresponding new value.
-        set-attributes: func(attributes: list<key-value>);
+    /// TODO
+    record span-data {
+        /// Span context
+        span-context: span-context,
+        /// Span parent id
+        // TODO: No clue what this is for
+        parent-span-id: string,
+        /// Span kind
+        span-kind: span-kind,
+        // Span name
+        name: string,
+        /// Span start time
+        start-time: datetime,
+        /// Span end time
+        end-time: datetime,
+        /// Span attributes
+        attributes: list<key-value>,
+        /// Span events
+        events: list<event>,
+        /// Span Links
+        links: list<link>,
+        /// Span status
+        status: status,
+        /// Instrumentation scope that produced this span
+        instrumentation-scope: instrumentation-scope,
 
-        /// Adds an event with the provided name at the curent timestamp.
-        ///
-        /// Optionally an alternative timestamp may be provided. You may also provide attributes of this event.
-        add-event: func(name: string, timestamp: option<datetime>, attributes: option<list<key-value>>);
-
-        /// Associates this `span` with another.
-        add-link: func(link: link);
-
-        /// Override the default `span` status, which is unset.
-        set-status: func(status: status);
-
-        /// Updates the `span` name.
-        update-name: func(name: string);
-
-        /// Signals that the operation described by this span has now ended.
-        ///
-        /// If a timestamp is not provided then it is treated equivalent to passing the current time. Dropping this resource is the equivalent of calling `end(none)`.
-        end: func(timestamp: option<datetime>);
+        // TODO:
+        // - Dropped counts
+        // - parent span id vs parent span context
     }
 
-    /// Configuration for starting a `span`.
-    record start-options {
-        /// Whether this span should act as the root of a new trace.
-        new-root: bool,
-        /// `span-kind` for the new `span`.
-        span-kind: option<span-kind>,
-        /// Attributes for the new `span`.
-        attributes: option<list<key-value>>,
-        /// `link`'s for the new `span`.
-        links: option<list<link>>,
-        /// When the `span` should begin. If this is not provided it defaults to the current time.
-        timestamp: option<datetime>,
+    /// An event describing a specific moment in time on a span and associated attributes.
+    record event {
+        /// Event name
+        name: string,
+        /// Event time
+        time: datetime,
+        /// Event attributes
+        attributes: list<key-value>,
     }
 
     /// Describes a relationship to another `span`.
@@ -148,4 +148,22 @@ interface tracer {
     ///
     /// If any invalid keys or values are provided then the `trace-state` will be treated as an empty list.
     type trace-state = list<tuple<string, string>>;
+
+    /// TODO
+    record instrumentation-scope {
+        /// Name of the instrumentation scope.
+        name: string,
+
+        /// The library version.
+        version: option<string>,
+
+        /// Schema URL used by this library.
+        /// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.9.0/specification/schemas/overview.md#schema-url
+        schema-url: option<string>,
+
+        /// Specifies the instrumentation scope attributes to associate with emitted telemetry.
+        attributes: list<key-value>,
+    }
 }
+
+// TODO: order things

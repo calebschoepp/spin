@@ -7,7 +7,7 @@ use opentelemetry_sdk::propagation::TraceContextPropagator;
 use tracing_subscriber::{fmt, prelude::*, registry, EnvFilter, Layer};
 
 pub mod detector;
-mod env;
+pub mod env;
 pub mod logs;
 pub mod metrics;
 mod propagation;

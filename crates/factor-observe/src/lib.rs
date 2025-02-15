@@ -1,14 +1,24 @@
 mod host;
 
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 
+use anyhow::bail;
 use indexmap::IndexSet;
 use opentelemetry::{
-    global::{self, BoxedTracer, ObjectSafeSpan},
-    trace::{SpanId, TraceContextExt},
+    trace::{SpanContext, SpanId, TraceContextExt},
     Context,
 };
+use opentelemetry_sdk::{
+    resource::{EnvResourceDetector, TelemetryResourceDetector},
+    trace::{SimpleSpanProcessor, SpanProcessor},
+    Resource,
+};
 use spin_factors::{Factor, PrepareContext, RuntimeFactors, SelfInstanceBuilder};
+use spin_telemetry::{detector::SpinResourceDetector, env::OtlpProtocol};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 #[derive(Default)]
@@ -23,7 +33,7 @@ impl Factor for ObserveFactor {
         &mut self,
         mut ctx: spin_factors::InitContext<T, Self>,
     ) -> anyhow::Result<()> {
-        ctx.link_bindings(spin_world::wasi::observe::tracer::add_to_linker)?;
+        ctx.link_bindings(spin_world::wasi::otel::tracing::add_to_linker)?;
         Ok(())
     }
 
@@ -36,16 +46,39 @@ impl Factor for ObserveFactor {
 
     fn prepare<T: spin_factors::RuntimeFactors>(
         &self,
-        ctx: spin_factors::PrepareContext<T, Self>,
+        _: spin_factors::PrepareContext<T, Self>,
     ) -> anyhow::Result<Self::InstanceBuilder> {
-        let tracer = global::tracer(ctx.app_component().app.id().to_string());
+        // This will configure the exporter based on the OTEL_EXPORTER_* environment variables.
+        let exporter = match OtlpProtocol::traces_protocol_from_env() {
+            OtlpProtocol::Grpc => opentelemetry_otlp::SpanExporter::builder()
+                .with_tonic()
+                .build()?,
+            OtlpProtocol::HttpProtobuf => opentelemetry_otlp::SpanExporter::builder()
+                .with_http()
+                .build()?,
+            OtlpProtocol::HttpJson => bail!("http/json OTLP protocol is not supported"),
+        };
+        let mut processor = opentelemetry_sdk::trace::SimpleSpanProcessor::new(Box::new(exporter));
+        // TODO: Allow guest to dynamically set resource of the processor?
+        processor.set_resource(&Resource::from_detectors(
+            Duration::from_secs(5),
+            vec![
+                // Set service.name from env OTEL_SERVICE_NAME > env OTEL_RESOURCE_ATTRIBUTES > spin
+                // Set service.version from Spin metadata
+                Box::new(SpinResourceDetector::new("27.0.1 todo".to_string())),
+                // Sets fields from env OTEL_RESOURCE_ATTRIBUTES
+                Box::new(EnvResourceDetector::new()),
+                // Sets telemetry.sdk{name, language, version}
+                Box::new(TelemetryResourceDetector),
+            ],
+        ));
         Ok(InstanceState {
             state: Arc::new(RwLock::new(State {
-                guest_spans: Default::default(),
+                guest_span_contexts: Default::default(),
                 active_spans: Default::default(),
                 original_host_span_id: None,
             })),
-            tracer,
+            processor,
         })
     }
 }
@@ -58,7 +91,7 @@ impl ObserveFactor {
 
 pub struct InstanceState {
     pub(crate) state: Arc<RwLock<State>>,
-    pub(crate) tracer: BoxedTracer,
+    pub(crate) processor: SimpleSpanProcessor,
 }
 
 impl SelfInstanceBuilder for InstanceState {}
@@ -68,14 +101,16 @@ impl SelfInstanceBuilder for InstanceState {}
 /// This data lives here rather than directly on InstanceState so that we can have multiple things
 /// take Arc references to it.
 pub(crate) struct State {
-    /// A resource table that holds the guest spans.
-    pub(crate) guest_spans: spin_resource_table::Table<GuestSpan>,
+    /// A mapping between immutable [SpanId]s and the actual [BoxedSpan] created by our tracer.
+    // TODO: Rename to not include "guest"
+    // TODO: Merge with active_spans
+    pub(crate) guest_span_contexts: HashMap<SpanId, SpanContext>,
 
-    /// A stack of resource ids for all the active guest spans. The topmost span is the active span.
+    /// A stack of [SpanIds] for all the active spans. The topmost span is the active span.
     ///
-    /// When a guest span is ended it is removed from this stack (regardless of whether is the
+    /// When a span is ended it is removed from this stack (regardless of whether is the
     /// active span) and all other spans are shifted back to retain relative order.
-    pub(crate) active_spans: IndexSet<u32>,
+    pub(crate) active_spans: IndexSet<SpanId>,
 
     /// Id of the last span emitted from within the host before entering the guest.
     ///
@@ -84,11 +119,11 @@ pub(crate) struct State {
     pub(crate) original_host_span_id: Option<SpanId>,
 }
 
-/// The WIT resource Span. Effectively wraps an [opentelemetry::global::BoxedSpan].
-pub struct GuestSpan {
-    /// The [opentelemetry::global::BoxedSpan] we use to do the actual tracing work.
-    pub inner: opentelemetry::global::BoxedSpan,
-}
+// /// The WIT resource Span. Effectively wraps an [opentelemetry::global::BoxedSpan].
+// pub struct GuestSpan {
+//     /// The [opentelemetry::global::BoxedSpan] we use to do the actual tracing work.
+//     pub inner: BoxedSpan,
+// }
 
 /// Manages access to the ObserveFactor state for the purpose of maintaining proper span
 /// parent/child relationships when WASI Observe spans are being created.
@@ -164,13 +199,7 @@ impl ObserveContext {
         }
 
         // Now reparent the current span to the last active guest span
-        let span_context = state
-            .guest_spans
-            .get(*active_span)
-            .unwrap()
-            .inner
-            .span_context()
-            .clone();
+        let span_context = state.guest_span_contexts.get(active_span).unwrap().clone();
         let parent_context = Context::new().with_remote_span_context(span_context);
         tracing::Span::current().set_parent(parent_context);
     }

@@ -8,4 +8,5 @@ edition = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
 wasmtime = { workspace = true }
