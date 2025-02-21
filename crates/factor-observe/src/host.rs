@@ -106,7 +106,7 @@ impl wasi_otel::Host for InstanceState {
 
     async fn current_span_context(&mut self) -> Result<wasi_otel::SpanContext> {
         // TODO: The bug is that tracing::Span::current() is not returning anything
-        let context = tracing::Span::current().context();
+        let context = dbg!(dbg!(tracing::Span::current()).context());
         let span = context.span();
         let span_context = span.span_context();
         let out: SpanContext = span_context.clone().into();

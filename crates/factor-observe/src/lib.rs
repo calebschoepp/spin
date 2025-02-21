@@ -48,6 +48,7 @@ impl Factor for ObserveFactor {
         &self,
         _: spin_factors::PrepareContext<T, Self>,
     ) -> anyhow::Result<Self::InstanceBuilder> {
+        // TODO: Configuring the processor should move to init
         // This will configure the exporter based on the OTEL_EXPORTER_* environment variables.
         let exporter = match OtlpProtocol::traces_protocol_from_env() {
             OtlpProtocol::Grpc => opentelemetry_otlp::SpanExporter::builder()
