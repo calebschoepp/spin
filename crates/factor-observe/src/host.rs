@@ -25,11 +25,13 @@ impl wasi_otel::Host for InstanceState {
 
         // Before we ever create any new spans make sure we track the original host span ID
         if state.original_host_span_id.is_none() {
-            // TODO: Note this is also failing to get anything meaningful through tracing::Span::current()
-            let context = dbg!(tracing::Span::current().context());
-            let span = dbg!(context.span());
-            let span_context = dbg!(span.span_context());
-            state.original_host_span_id = dbg!(Some(span_context.span_id()));
+            state.original_host_span_id = Some(
+                tracing::Span::current()
+                    .context()
+                    .span()
+                    .span_context()
+                    .span_id(),
+            );
         }
 
         // // Get span's parent based on whether it's a new root and whether there are any active spans
@@ -105,12 +107,12 @@ impl wasi_otel::Host for InstanceState {
     }
 
     async fn current_span_context(&mut self) -> Result<wasi_otel::SpanContext> {
-        // TODO: The bug is that tracing::Span::current() is not returning anything
-        let context = dbg!(dbg!(tracing::Span::current()).context());
-        let span = context.span();
-        let span_context = span.span_context();
-        let out: SpanContext = span_context.clone().into();
-        Ok(out)
+        Ok(tracing::Span::current()
+            .context()
+            .span()
+            .span_context()
+            .clone()
+            .into())
     }
 }
 
