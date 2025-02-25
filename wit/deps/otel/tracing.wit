@@ -1,16 +1,16 @@
 interface tracing {
     use wasi:clocks/wall-clock@0.2.0.{datetime};
 
-    /// TODO
+    /// Called when a span is started.
     on-start: func(span: span-data, parent: span-context);
 
-    /// TODO
+    /// Called when a span is ended.
     on-end: func(span: span-data);
 
-    /// TODO
+    /// Returns the current span context of the host.
     current-span-context: func() -> span-context;
 
-    /// TODO
+    /// The data associated with a span.
     record span-data {
         /// Span context
         span-context: span-context,
@@ -39,79 +39,6 @@ interface tracing {
         // TODO:
         // - Dropped counts
         // - parent span id vs parent span context
-    }
-
-    /// An event describing a specific moment in time on a span and associated attributes.
-    record event {
-        /// Event name
-        name: string,
-        /// Event time
-        time: datetime,
-        /// Event attributes
-        attributes: list<key-value>,
-    }
-
-    /// Describes a relationship to another `span`.
-    record link {
-        /// Denotes which `span` to link to.
-        span-context: span-context,
-        /// Attributes describing the link.
-        attributes: list<key-value>,
-    }
-
-    /// Describes the relationship between the Span, its parents, and its children in a trace.
-    enum span-kind {
-        /// Indicates that the span describes a request to some remote service. This span is usually the parent of a remote server span and does not end until the response is received.
-        client,
-        /// Indicates that the span covers server-side handling of a synchronous RPC or other remote request. This span is often the child of a remote client span that was expected to wait for a response.
-        server,
-        /// Indicates that the span describes the initiators of an asynchronous request. This parent span will often end before the corresponding child consumer span, possibly even before the child span starts. In messaging scenarios with batching, tracing individual messages requires a new producer span per message to be created.
-        producer,
-        /// Indicates that the span describes a child of an asynchronous consumer request.
-        consumer,
-        /// Default value. Indicates that the span represents an internal operation within an application, as opposed to an operations with remote parents or children.
-        internal
-    }
-
-    /// The `status` of a `span`.
-    variant status {
-        /// The default status.
-        unset,
-        /// The operation has been validated by an Application developer or Operator to have completed successfully.
-        ok,
-        /// The operation contains an error with a description.
-        error(string),
-    }
-
-    /// A key-value pair describing an attribute.
-    record key-value {
-        /// The attribute name.
-        key: key,
-        /// The attribute value.
-        value: value,
-    }
-
-    /// The key part of attribute `key-value` pairs.
-    type key = string;
-
-    /// The value part of attribute `key-value` pairs.
-    variant value {
-        /// A string value.
-        %string(string),
-        /// A boolean value.
-        %bool(bool),
-        /// A double precision floating point value.
-        %float64(float64),
-        /// A signed 64 bit integer value.
-        %s64(s64),
-        /// A homogeneous array of string values.
-        string-array(list<string>),
-        /// A homogeneous array of boolean values.
-        bool-array(list<bool>),
-        /// A homogeneous array of double precision floating point values.
-        float64-array(list<float64>),
-        /// A homogeneous array of 64 bit integer values.
-        s64-array(list<s64>),
     }
 
     /// Identifying trace information about a span that can be serialized and propagated.
@@ -149,7 +76,80 @@ interface tracing {
     /// If any invalid keys or values are provided then the `trace-state` will be treated as an empty list.
     type trace-state = list<tuple<string, string>>;
 
-    /// TODO
+    /// Describes the relationship between the Span, its parents, and its children in a trace.
+    enum span-kind {
+        /// Indicates that the span describes a request to some remote service. This span is usually the parent of a remote server span and does not end until the response is received.
+        client,
+        /// Indicates that the span covers server-side handling of a synchronous RPC or other remote request. This span is often the child of a remote client span that was expected to wait for a response.
+        server,
+        /// Indicates that the span describes the initiators of an asynchronous request. This parent span will often end before the corresponding child consumer span, possibly even before the child span starts. In messaging scenarios with batching, tracing individual messages requires a new producer span per message to be created.
+        producer,
+        /// Indicates that the span describes a child of an asynchronous consumer request.
+        consumer,
+        /// Default value. Indicates that the span represents an internal operation within an application, as opposed to an operations with remote parents or children.
+        internal
+    }
+
+    /// A key-value pair describing an attribute.
+    record key-value {
+        /// The attribute name.
+        key: key,
+        /// The attribute value.
+        value: value,
+    }
+
+    /// The key part of attribute `key-value` pairs.
+    type key = string;
+
+    /// The value part of attribute `key-value` pairs.
+    variant value {
+        /// A string value.
+        %string(string),
+        /// A boolean value.
+        %bool(bool),
+        /// A double precision floating point value.
+        %float64(float64),
+        /// A signed 64 bit integer value.
+        %s64(s64),
+        /// A homogeneous array of string values.
+        string-array(list<string>),
+        /// A homogeneous array of boolean values.
+        bool-array(list<bool>),
+        /// A homogeneous array of double precision floating point values.
+        float64-array(list<float64>),
+        /// A homogeneous array of 64 bit integer values.
+        s64-array(list<s64>),
+    }
+
+    /// An event describing a specific moment in time on a span and associated attributes.
+    record event {
+        /// Event name
+        name: string,
+        /// Event time
+        time: datetime,
+        /// Event attributes
+        attributes: list<key-value>,
+    }
+
+    /// Describes a relationship to another `span`.
+    record link {
+        /// Denotes which `span` to link to.
+        span-context: span-context,
+        /// Attributes describing the link.
+        attributes: list<key-value>,
+    }
+
+    /// The `status` of a `span`.
+    variant status {
+        /// The default status.
+        unset,
+        /// The operation has been validated by an Application developer or Operator to have completed successfully.
+        ok,
+        /// The operation contains an error with a description.
+        error(string),
+    }
+
+    /// Describes the instrumentation scope that produced a span.
     record instrumentation-scope {
         /// Name of the instrumentation scope.
         name: string,
@@ -165,5 +165,3 @@ interface tracing {
         attributes: list<key-value>,
     }
 }
-
-// TODO: order things

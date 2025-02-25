@@ -9,5 +9,5 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "1"
 http = "0.2"
-spin-sdk = "2.2.0"
+spin-sdk = "3.1.0"
 wit-bindgen = "0.30.0"
