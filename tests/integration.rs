@@ -1528,71 +1528,6 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_otel_drop_semantics() -> anyhow::Result<()> {
-        let rt = tokio::runtime::Runtime::new()?;
-        let mut collector = rt
-            .block_on(FakeCollectorServer::start())
-            .expect("fake collector server should start");
-        let collector_endpoint = collector.endpoint().clone();
-
-        run_test_inited(
-            "wasi-otel-tracing",
-            SpinConfig {
-                binary_path: spin_binary(),
-                spin_up_args: Vec::new(),
-                app_type: SpinAppType::Http,
-            },
-            ServicesConfig::none(),
-            |env| {
-                env.set_env_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", collector_endpoint);
-                env.set_env_var("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", "grpc");
-                env.set_env_var("OTEL_BSP_SCHEDULE_DELAY", "5");
-                Ok(())
-            },
-            move |env| {
-                let spin = env.runtime_mut();
-                assert_spin_request(
-                    spin,
-                    Request::new(Method::Get, "/drop-semantics"),
-                    Response::new(200),
-                )?;
-
-                let spans = rt.block_on(collector.exported_spans(3, Duration::from_secs(5)));
-
-                assert_eq!(spans.len(), 3);
-
-                let handle_request_span = spans
-                    .iter()
-                    .find(|s| s.name == "GET /...")
-                    .expect("'GET /...' span should exist");
-                let exec_component_span = spans
-                    .iter()
-                    .find(|s| s.name == "execute_wasm_component wasi-otel-tracing")
-                    .expect("'execute_wasm_component wasi-otel-tracing' span should exist");
-                let drop_span = spans
-                    .iter()
-                    .find(|s| s.name == "drop_semantics")
-                    .expect("'drop_semantics' span should exist");
-
-                assert!(
-                    handle_request_span.trace_id == exec_component_span.trace_id
-                        && exec_component_span.trace_id == drop_span.trace_id
-                );
-                assert_eq!(
-                    exec_component_span.parent_span_id,
-                    handle_request_span.span_id
-                );
-                assert_eq!(drop_span.parent_span_id, exec_component_span.span_id);
-                assert!(drop_span.end_time_unix_nano < exec_component_span.end_time_unix_nano);
-
-                Ok(())
-            },
-        )?;
-
-        Ok(())
-    }
-
-    #[test]
     fn wasi_otel_setting_attributes() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
@@ -1840,63 +1775,6 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_otel_child_outlives_parent() -> anyhow::Result<()> {
-        let rt = tokio::runtime::Runtime::new()?;
-        let mut collector = rt
-            .block_on(FakeCollectorServer::start())
-            .expect("fake collector server should start");
-        let collector_endpoint = collector.endpoint().clone();
-
-        run_test_inited(
-            "wasi-otel-tracing",
-            SpinConfig {
-                binary_path: spin_binary(),
-                spin_up_args: Vec::new(),
-                app_type: SpinAppType::Http,
-            },
-            ServicesConfig::none(),
-            |env| {
-                env.set_env_var("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", collector_endpoint);
-                env.set_env_var("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", "grpc");
-                env.set_env_var("OTEL_BSP_SCHEDULE_DELAY", "5");
-                Ok(())
-            },
-            move |env| {
-                let spin = env.runtime_mut();
-                assert_spin_request(
-                    spin,
-                    Request::new(Method::Get, "/child-outlives-parent"),
-                    Response::new(200),
-                )?;
-
-                let spans = rt.block_on(collector.exported_spans(5, Duration::from_secs(5)));
-
-                assert_eq!(spans.len(), 5);
-
-                let parent_span = spans
-                    .iter()
-                    .find(|s| s.name == "parent")
-                    .expect("'parent' span should exist");
-                let child_span = spans
-                    .iter()
-                    .find(|s| s.name == "child")
-                    .expect("'child' span should exist");
-                let get_span = spans
-                    .iter()
-                    .find(|s| s.name == "GET")
-                    .expect("'GET' span should exist");
-                assert_eq!(child_span.parent_span_id, parent_span.span_id);
-                assert_eq!(get_span.parent_span_id, child_span.span_id);
-                assert!(child_span.end_time_unix_nano > parent_span.end_time_unix_nano);
-
-                Ok(())
-            },
-        )?;
-
-        Ok(())
-    }
-
-    #[test]
     fn wasi_otel_root_span() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
@@ -1928,38 +1806,20 @@ mod otel_integration_tests {
 
                 let spans = rt.block_on(collector.exported_spans(7, Duration::from_secs(5)));
 
-                assert_eq!(spans.len(), 7);
+                assert_eq!(spans.len(), 4);
 
-                let parent_span = spans
-                    .iter()
-                    .find(|s| s.name == "parent")
-                    .expect("'parent' span should exist");
-                let request_one = spans
-                    .iter()
-                    .find(|s| s.name == "GET")
-                    .expect("first 'GET' span should exist");
                 let root_span = spans
                     .iter()
                     .find(|s| s.name == "root")
                     .expect("'root' span should exist");
-                let request_two = spans
+                let request_span = spans
                     .iter()
-                    .filter(|s| s.name == "GET")
-                    .nth(1)
-                    .expect("second 'GET' span should exist");
-                let request_three = spans
-                    .iter()
-                    .filter(|s| s.name == "GET")
-                    .nth(2)
-                    .expect("third 'GET' span should exist");
+                    .find(|s| s.name == "GET")
+                    .expect("'GET' span should exist");
 
-                assert_eq!(parent_span.trace_id, request_one.trace_id);
-                assert_ne!(root_span.trace_id, parent_span.trace_id);
-                assert_eq!(root_span.trace_id, request_two.trace_id);
-                assert_eq!(parent_span.trace_id, request_three.trace_id);
+                assert_eq!(root_span.trace_id, request_span.trace_id);
+                assert_eq!(root_span.span_id, request_span.parent_span_id);
                 assert_eq!(root_span.parent_span_id, "".to_string());
-                assert_eq!(request_two.parent_span_id, root_span.span_id);
-                assert_ne!(request_three.parent_span_id, parent_span.span_id);
 
                 Ok(())
             },

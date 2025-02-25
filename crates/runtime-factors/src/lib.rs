@@ -44,7 +44,7 @@ impl TriggerFactors {
         allow_transient_writes: bool,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            otel: OtelFactor::new(),
+            otel: OtelFactor::new()?,
             wasi: wasi_factor(working_dir, allow_transient_writes),
             variables: VariablesFactor::default(),
             key_value: KeyValueFactor::new(),

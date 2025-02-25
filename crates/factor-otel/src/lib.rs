@@ -14,15 +14,17 @@ use opentelemetry::{
 };
 use opentelemetry_sdk::{
     resource::{EnvResourceDetector, TelemetryResourceDetector},
-    trace::{SimpleSpanProcessor, SpanProcessor},
+    runtime::Tokio,
+    trace::{BatchSpanProcessor, SpanProcessor},
     Resource,
 };
 use spin_factors::{Factor, PrepareContext, RuntimeFactors, SelfInstanceBuilder};
 use spin_telemetry::{detector::SpinResourceDetector, env::OtlpProtocol};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
-#[derive(Default)]
-pub struct OtelFactor {}
+pub struct OtelFactor {
+    processor: Arc<BatchSpanProcessor<Tokio>>,
+}
 
 impl Factor for OtelFactor {
     type RuntimeConfig = ();
@@ -48,6 +50,19 @@ impl Factor for OtelFactor {
         &self,
         _: spin_factors::PrepareContext<T, Self>,
     ) -> anyhow::Result<Self::InstanceBuilder> {
+        Ok(InstanceState {
+            state: Arc::new(RwLock::new(State {
+                guest_span_contexts: Default::default(),
+                active_spans: Default::default(),
+                original_host_span_id: None,
+            })),
+            processor: self.processor.clone(),
+        })
+    }
+}
+
+impl OtelFactor {
+    pub fn new() -> anyhow::Result<Self> {
         // TODO: Configuring the processor should move to init
         // This will configure the exporter based on the OTEL_EXPORTER_* environment variables.
         let exporter = match OtlpProtocol::traces_protocol_from_env() {
@@ -59,40 +74,34 @@ impl Factor for OtelFactor {
                 .build()?,
             OtlpProtocol::HttpJson => bail!("http/json OTLP protocol is not supported"),
         };
-        let mut processor = opentelemetry_sdk::trace::SimpleSpanProcessor::new(Box::new(exporter));
-        // TODO: Allow guest to dynamically set resource of the processor?
+        let mut processor = opentelemetry_sdk::trace::BatchSpanProcessor::builder(
+            exporter,
+            opentelemetry_sdk::runtime::Tokio,
+        )
+        .build();
+        // This is a hack b/c we know the version of this crate will be the same as the version of Spin
+        let spin_version = env!("CARGO_PKG_VERSION").to_string();
         processor.set_resource(&Resource::from_detectors(
             Duration::from_secs(5),
             vec![
                 // Set service.name from env OTEL_SERVICE_NAME > env OTEL_RESOURCE_ATTRIBUTES > spin
                 // Set service.version from Spin metadata
-                Box::new(SpinResourceDetector::new("27.0.1 todo".to_string())),
+                Box::new(SpinResourceDetector::new(spin_version)),
                 // Sets fields from env OTEL_RESOURCE_ATTRIBUTES
                 Box::new(EnvResourceDetector::new()),
                 // Sets telemetry.sdk{name, language, version}
                 Box::new(TelemetryResourceDetector),
             ],
         ));
-        Ok(InstanceState {
-            state: Arc::new(RwLock::new(State {
-                guest_span_contexts: Default::default(),
-                active_spans: Default::default(),
-                original_host_span_id: None,
-            })),
-            processor,
+        Ok(Self {
+            processor: Arc::new(processor),
         })
-    }
-}
-
-impl OtelFactor {
-    pub fn new() -> Self {
-        Self::default()
     }
 }
 
 pub struct InstanceState {
     pub(crate) state: Arc<RwLock<State>>,
-    pub(crate) processor: SimpleSpanProcessor,
+    pub(crate) processor: Arc<BatchSpanProcessor<Tokio>>,
 }
 
 impl SelfInstanceBuilder for InstanceState {}
