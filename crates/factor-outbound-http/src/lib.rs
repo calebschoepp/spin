@@ -12,7 +12,7 @@ use http::{
     HeaderValue, Uri,
 };
 use intercept::OutboundHttpInterceptor;
-use spin_factor_observe::ObserveContext;
+use spin_factor_otel::OtelContext;
 use spin_factor_outbound_networking::{
     ComponentTlsConfigs, OutboundAllowedHosts, OutboundNetworkingFactor,
 };
@@ -76,7 +76,7 @@ impl Factor for OutboundHttpFactor {
         let outbound_networking = ctx.instance_builder::<OutboundNetworkingFactor>()?;
         let allowed_hosts = outbound_networking.allowed_hosts();
         let component_tls_configs = outbound_networking.component_tls_configs().clone();
-        let observe_context = ObserveContext::from_prepare_context(&mut ctx)?;
+        let otel_context = OtelContext::from_prepare_context(&mut ctx)?;
         Ok(InstanceState {
             wasi_http_ctx: WasiHttpCtx::new(),
             allowed_hosts,
@@ -85,7 +85,7 @@ impl Factor for OutboundHttpFactor {
             self_request_origin: None,
             request_interceptor: None,
             spin_http_client: None,
-            observe_context,
+            otel_context,
         })
     }
 }
@@ -99,7 +99,7 @@ pub struct InstanceState {
     request_interceptor: Option<Arc<dyn OutboundHttpInterceptor>>,
     // Connection-pooling client for 'fermyon:spin/http' interface
     spin_http_client: Option<reqwest::Client>,
-    observe_context: ObserveContext,
+    otel_context: OtelContext,
 }
 
 impl InstanceState {

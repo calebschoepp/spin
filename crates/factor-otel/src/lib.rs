@@ -22,9 +22,9 @@ use spin_telemetry::{detector::SpinResourceDetector, env::OtlpProtocol};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 #[derive(Default)]
-pub struct ObserveFactor {}
+pub struct OtelFactor {}
 
-impl Factor for ObserveFactor {
+impl Factor for OtelFactor {
     type RuntimeConfig = ();
     type AppState = ();
     type InstanceBuilder = InstanceState;
@@ -84,7 +84,7 @@ impl Factor for ObserveFactor {
     }
 }
 
-impl ObserveFactor {
+impl OtelFactor {
     pub fn new() -> Self {
         Self::default()
     }
@@ -97,7 +97,7 @@ pub struct InstanceState {
 
 impl SelfInstanceBuilder for InstanceState {}
 
-/// Internal state of the ObserveFactor instance state.
+/// Internal state of the OtelFactor instance state.
 ///
 /// This data lives here rather than directly on InstanceState so that we can have multiple things
 /// take Arc references to it.
@@ -126,21 +126,21 @@ pub(crate) struct State {
 //     pub inner: BoxedSpan,
 // }
 
-/// Manages access to the ObserveFactor state for the purpose of maintaining proper span
-/// parent/child relationships when WASI Observe spans are being created.
-pub struct ObserveContext {
+/// Manages access to the OtelFactor state for the purpose of maintaining proper span
+/// parent/child relationships when WASI Otel spans are being created.
+pub struct OtelContext {
     pub(crate) state: Option<Arc<RwLock<State>>>,
 }
 
-impl ObserveContext {
-    /// Creates an [`ObserveContext`] from a [`PrepareContext`].
+impl OtelContext {
+    /// Creates an [`OtelContext`] from a [`PrepareContext`].
     ///
-    /// If [`RuntimeFactors`] does not contain an [`ObserveFactor`], then calling
-    /// [`ObserveContext::reparent_tracing_span`] will be a no-op.
+    /// If [`RuntimeFactors`] does not contain an [`OtelFactor`], then calling
+    /// [`OtelContext::reparent_tracing_span`] will be a no-op.
     pub fn from_prepare_context<T: RuntimeFactors, F: Factor>(
         prepare_context: &mut PrepareContext<T, F>,
     ) -> anyhow::Result<Self> {
-        let state = match prepare_context.instance_builder::<ObserveFactor>() {
+        let state = match prepare_context.instance_builder::<OtelFactor>() {
             Ok(instance_state) => Some(instance_state.state.clone()),
             Err(spin_factors::Error::NoSuchFactor(_)) => None,
             Err(e) => return Err(e.into()),
@@ -150,7 +150,7 @@ impl ObserveContext {
 
     /// Reparents the current [tracing] span to be a child of the last active guest span.
     ///
-    /// The observe factor enables guests to emit spans that should be part of the same trace as the
+    /// The otel factor enables guests to emit spans that should be part of the same trace as the
     /// host is producing for a request. Below is an example trace. A request is made to an app, a
     /// guest span is created and then the host is re-entered to fetch a key value.
     ///
@@ -163,10 +163,10 @@ impl ObserveContext {
     ///
     ///  Setting the guest spans parent as the host is trivially done. However, the more difficult
     /// task is having the host factor spans be children of the guest span.
-    /// [`ObserveContext::reparent_tracing_span`] handles this by reparenting the current span to be
-    /// a child of the last active guest span (which is tracked internally in the observe factor).
+    /// [`OtelContext::reparent_tracing_span`] handles this by reparenting the current span to be
+    /// a child of the last active guest span (which is tracked internally in the otel factor).
     ///
-    /// Note that if the observe factor is not in your [`RuntimeFactors`] than this is effectively a
+    /// Note that if the otel factor is not in your [`RuntimeFactors`] than this is effectively a
     /// no-op.
     ///
     /// This MUST only be called from a factor host implementation function that is instrumented.
@@ -174,7 +174,7 @@ impl ObserveContext {
     /// This MUST be called at the very start of the function before any awaits.
     pub fn reparent_tracing_span(&self) {
         // If state is None then we want to return early b/c the factor doesn't depend on the
-        // Observe factor and therefore there is nothing to do
+        // Otel factor and therefore there is nothing to do
         let state = if let Some(state) = self.state.as_ref() {
             state.read().unwrap()
         } else {

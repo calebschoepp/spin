@@ -1,5 +1,5 @@
 [package]
-name = "spin-factor-observe"
+name = "spin-factor-otel"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }

@@ -5,7 +5,7 @@ use spin_common::ui::quoted_path;
 use spin_factor_key_value::runtime_config::spin::{self as key_value};
 use spin_factor_key_value::KeyValueFactor;
 use spin_factor_llm::{spin as llm, LlmFactor};
-use spin_factor_observe::ObserveFactor;
+use spin_factor_otel::OtelFactor;
 use spin_factor_outbound_http::OutboundHttpFactor;
 use spin_factor_outbound_mqtt::OutboundMqttFactor;
 use spin_factor_outbound_mysql::OutboundMysqlFactor;
@@ -374,7 +374,7 @@ impl FactorRuntimeConfigSource<SqliteFactor> for TomlRuntimeConfigSource<'_, '_>
     }
 }
 
-impl FactorRuntimeConfigSource<ObserveFactor> for TomlRuntimeConfigSource<'_, '_> {
+impl FactorRuntimeConfigSource<OtelFactor> for TomlRuntimeConfigSource<'_, '_> {
     fn get_runtime_config(&mut self) -> anyhow::Result<Option<()>> {
         Ok(None)
     }

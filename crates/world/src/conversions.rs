@@ -495,7 +495,7 @@ mod llm {
     }
 }
 
-mod observe {
+mod otel {
     use super::*;
     use opentelemetry::StringValue;
     use opentelemetry_sdk::trace::{SpanEvents, SpanLinks};

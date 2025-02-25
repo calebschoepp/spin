@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use spin_factor_observe::ObserveContext;
+use spin_factor_otel::OtelContext;
 use spin_factors::wasmtime::component::Resource;
 use spin_factors::{anyhow, SelfInstanceBuilder};
 use spin_world::v1::sqlite as v1;
@@ -17,7 +17,7 @@ pub struct InstanceState {
     connections: spin_resource_table::Table<Box<dyn Connection>>,
     /// A map from database label to connection creators.
     connection_creators: HashMap<String, Arc<dyn ConnectionCreator>>,
-    observe_context: ObserveContext,
+    otel_context: OtelContext,
 }
 
 impl InstanceState {
@@ -27,13 +27,13 @@ impl InstanceState {
     pub fn new(
         allowed_databases: Arc<HashSet<String>>,
         connection_creators: HashMap<String, Arc<dyn ConnectionCreator>>,
-        observe_context: ObserveContext,
+        otel_context: OtelContext,
     ) -> Self {
         Self {
             allowed_databases,
             connections: spin_resource_table::Table::new(256),
             connection_creators,
-            observe_context,
+            otel_context,
         }
     }
 
@@ -65,7 +65,7 @@ impl v2::Host for InstanceState {
 impl v2::HostConnection for InstanceState {
     #[instrument(name = "spin_sqlite.open", skip(self), err(level = Level::INFO), fields(otel.kind = "client", db.system = "sqlite", sqlite.backend = Empty))]
     async fn open(&mut self, database: String) -> Result<Resource<v2::Connection>, v2::Error> {
-        self.observe_context.reparent_tracing_span();
+        self.otel_context.reparent_tracing_span();
 
         if !self.allowed_databases.contains(&database) {
             return Err(v2::Error::AccessDenied);
@@ -93,7 +93,7 @@ impl v2::HostConnection for InstanceState {
         query: String,
         parameters: Vec<v2::Value>,
     ) -> Result<v2::QueryResult, v2::Error> {
-        self.observe_context.reparent_tracing_span();
+        self.otel_context.reparent_tracing_span();
 
         let conn = match self.get_connection(connection) {
             Ok(c) => c,

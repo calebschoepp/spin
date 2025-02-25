@@ -7876,7 +7876,7 @@ dependencies = [
  "anyhow",
  "serde",
  "spin-core",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factors",
  "spin-factors-test",
  "spin-key-value-redis",
@@ -7898,7 +7898,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "serde",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factors",
  "spin-factors-test",
  "spin-llm-local",
@@ -7913,7 +7913,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "spin-factor-observe"
+name = "spin-factor-otel"
 version = "3.2.0-pre0"
 dependencies = [
  "anyhow",
@@ -7942,7 +7942,7 @@ dependencies = [
  "ip_network",
  "reqwest 0.12.9",
  "rustls 0.23.18",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factor-outbound-networking",
  "spin-factor-variables",
  "spin-factors",
@@ -7964,7 +7964,7 @@ dependencies = [
  "anyhow",
  "rumqttc",
  "spin-core",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factor-outbound-networking",
  "spin-factor-variables",
  "spin-factors",
@@ -7982,7 +7982,7 @@ dependencies = [
  "anyhow",
  "mysql_async",
  "spin-core",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factor-outbound-networking",
  "spin-factor-variables",
  "spin-factors",
@@ -8033,7 +8033,7 @@ dependencies = [
  "native-tls",
  "postgres-native-tls",
  "spin-core",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factor-outbound-networking",
  "spin-factor-variables",
  "spin-factors",
@@ -8052,7 +8052,7 @@ dependencies = [
  "anyhow",
  "redis 0.25.4",
  "spin-core",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factor-outbound-networking",
  "spin-factor-variables",
  "spin-factors",
@@ -8068,7 +8068,7 @@ name = "spin-factor-sqlite"
 version = "3.2.0-pre0"
 dependencies = [
  "async-trait",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factors",
  "spin-factors-test",
  "spin-locked-app",
@@ -8083,7 +8083,7 @@ name = "spin-factor-variables"
 version = "3.2.0-pre0"
 dependencies = [
  "spin-expressions",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factors",
  "spin-factors-test",
  "spin-world",
@@ -8386,7 +8386,7 @@ dependencies = [
  "spin-common",
  "spin-factor-key-value",
  "spin-factor-llm",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factor-outbound-http",
  "spin-factor-outbound-mqtt",
  "spin-factor-outbound-mysql",
@@ -8420,7 +8420,7 @@ dependencies = [
  "spin-common",
  "spin-factor-key-value",
  "spin-factor-llm",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factor-outbound-http",
  "spin-factor-outbound-mqtt",
  "spin-factor-outbound-mysql",
@@ -8580,7 +8580,7 @@ dependencies = [
  "serde_json",
  "spin-app",
  "spin-core",
- "spin-factor-observe",
+ "spin-factor-otel",
  "spin-factor-outbound-http",
  "spin-factor-outbound-networking",
  "spin-factor-wasi",

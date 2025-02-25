@@ -87,7 +87,7 @@ impl WasiHttpView for WasiHttpImplInner<'_> {
         request: Request<wasmtime_wasi_http::body::HyperOutgoingBody>,
         config: wasmtime_wasi_http::types::OutgoingRequestConfig,
     ) -> wasmtime_wasi_http::HttpResult<wasmtime_wasi_http::types::HostFutureIncomingResponse> {
-        self.state.observe_context.reparent_tracing_span();
+        self.state.otel_context.reparent_tracing_span();
 
         Ok(HostFutureIncomingResponse::Pending(
             wasmtime_wasi::runtime::spawn(

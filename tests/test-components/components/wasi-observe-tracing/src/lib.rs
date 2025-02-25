@@ -1,6 +1,6 @@
 wit_bindgen::generate!({
     path: "../../../../wit",
-    world: "wasi:observe/imports@0.2.0-draft",
+    world: "wasi:otel/imports@0.2.0-draft",
     generate_all,
 });
 
@@ -10,7 +10,7 @@ use spin_sdk::{
 };
 use wasi::{
     clocks0_2_0::wall_clock::now,
-    observe::tracer::{self, KeyValue, Link, StartOptions, Value},
+    otel::tracer::{self, KeyValue, Link, StartOptions, Value},
 };
 
 #[http_component]

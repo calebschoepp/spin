@@ -1458,7 +1458,7 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_observe_nested_spans() -> anyhow::Result<()> {
+    fn wasi_otel_nested_spans() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
             .block_on(FakeCollectorServer::start())
@@ -1466,7 +1466,7 @@ mod otel_integration_tests {
         let collector_endpoint = collector.endpoint().clone();
 
         run_test_inited(
-            "wasi-observe-tracing",
+            "wasi-otel-tracing",
             SpinConfig {
                 binary_path: spin_binary(),
                 spin_up_args: Vec::new(),
@@ -1497,8 +1497,8 @@ mod otel_integration_tests {
                     .expect("'GET /...' span should exist");
                 let exec_component_span = spans
                     .iter()
-                    .find(|s| s.name == "execute_wasm_component wasi-observe-tracing")
-                    .expect("'execute_wasm_component wasi-observe-tracing' span should exist");
+                    .find(|s| s.name == "execute_wasm_component wasi-otel-tracing")
+                    .expect("'execute_wasm_component wasi-otel-tracing' span should exist");
                 let outer_span = spans
                     .iter()
                     .find(|s| s.name == "outer_func")
@@ -1528,7 +1528,7 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_observe_drop_semantics() -> anyhow::Result<()> {
+    fn wasi_otel_drop_semantics() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
             .block_on(FakeCollectorServer::start())
@@ -1536,7 +1536,7 @@ mod otel_integration_tests {
         let collector_endpoint = collector.endpoint().clone();
 
         run_test_inited(
-            "wasi-observe-tracing",
+            "wasi-otel-tracing",
             SpinConfig {
                 binary_path: spin_binary(),
                 spin_up_args: Vec::new(),
@@ -1567,8 +1567,8 @@ mod otel_integration_tests {
                     .expect("'GET /...' span should exist");
                 let exec_component_span = spans
                     .iter()
-                    .find(|s| s.name == "execute_wasm_component wasi-observe-tracing")
-                    .expect("'execute_wasm_component wasi-observe-tracing' span should exist");
+                    .find(|s| s.name == "execute_wasm_component wasi-otel-tracing")
+                    .expect("'execute_wasm_component wasi-otel-tracing' span should exist");
                 let drop_span = spans
                     .iter()
                     .find(|s| s.name == "drop_semantics")
@@ -1593,7 +1593,7 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_observe_setting_attributes() -> anyhow::Result<()> {
+    fn wasi_otel_setting_attributes() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
             .block_on(FakeCollectorServer::start())
@@ -1601,7 +1601,7 @@ mod otel_integration_tests {
         let collector_endpoint = collector.endpoint().clone();
 
         run_test_inited(
-            "wasi-observe-tracing",
+            "wasi-otel-tracing",
             SpinConfig {
                 binary_path: spin_binary(),
                 spin_up_args: Vec::new(),
@@ -1654,7 +1654,7 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_observe_host_guest_host() -> anyhow::Result<()> {
+    fn wasi_otel_host_guest_host() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
             .block_on(FakeCollectorServer::start())
@@ -1662,7 +1662,7 @@ mod otel_integration_tests {
         let collector_endpoint = collector.endpoint().clone();
 
         run_test_inited(
-            "wasi-observe-tracing",
+            "wasi-otel-tracing",
             SpinConfig {
                 binary_path: spin_binary(),
                 spin_up_args: Vec::new(),
@@ -1694,8 +1694,8 @@ mod otel_integration_tests {
 
                 let exec_component_span = spans
                     .iter()
-                    .find(|s| s.name == "execute_wasm_component wasi-observe-tracing")
-                    .expect("'execute_wasm_component wasi-observe-tracing' span should exist");
+                    .find(|s| s.name == "execute_wasm_component wasi-otel-tracing")
+                    .expect("'execute_wasm_component wasi-otel-tracing' span should exist");
                 let guest_span = spans
                     .iter()
                     .find(|s| s.name == "guest")
@@ -1716,7 +1716,7 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_observe_events() -> anyhow::Result<()> {
+    fn wasi_otel_events() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
             .block_on(FakeCollectorServer::start())
@@ -1724,7 +1724,7 @@ mod otel_integration_tests {
         let collector_endpoint = collector.endpoint().clone();
 
         run_test_inited(
-            "wasi-observe-tracing",
+            "wasi-otel-tracing",
             SpinConfig {
                 binary_path: spin_binary(),
                 spin_up_args: Vec::new(),
@@ -1782,7 +1782,7 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_observe_links() -> anyhow::Result<()> {
+    fn wasi_otel_links() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
             .block_on(FakeCollectorServer::start())
@@ -1790,7 +1790,7 @@ mod otel_integration_tests {
         let collector_endpoint = collector.endpoint().clone();
 
         run_test_inited(
-            "wasi-observe-tracing",
+            "wasi-otel-tracing",
             SpinConfig {
                 binary_path: spin_binary(),
                 spin_up_args: Vec::new(),
@@ -1840,7 +1840,7 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_observe_child_outlives_parent() -> anyhow::Result<()> {
+    fn wasi_otel_child_outlives_parent() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
             .block_on(FakeCollectorServer::start())
@@ -1848,7 +1848,7 @@ mod otel_integration_tests {
         let collector_endpoint = collector.endpoint().clone();
 
         run_test_inited(
-            "wasi-observe-tracing",
+            "wasi-otel-tracing",
             SpinConfig {
                 binary_path: spin_binary(),
                 spin_up_args: Vec::new(),
@@ -1897,7 +1897,7 @@ mod otel_integration_tests {
     }
 
     #[test]
-    fn wasi_observe_root_span() -> anyhow::Result<()> {
+    fn wasi_otel_root_span() -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let mut collector = rt
             .block_on(FakeCollectorServer::start())
@@ -1905,7 +1905,7 @@ mod otel_integration_tests {
         let collector_endpoint = collector.endpoint().clone();
 
         run_test_inited(
-            "wasi-observe-tracing",
+            "wasi-otel-tracing",
             SpinConfig {
                 binary_path: spin_binary(),
                 spin_up_args: Vec::new(),
