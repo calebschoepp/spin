@@ -512,7 +512,7 @@ mod otel {
             Self {
                 span_context: value.span_context.into(),
                 parent_span_id: opentelemetry::trace::SpanId::from_hex(&value.parent_span_id)
-                    .expect("TODO THIS IS BAD"),
+                    .unwrap_or(opentelemetry::trace::SpanId::INVALID),
                 span_kind: value.span_kind.into(),
                 name: value.name.into(),
                 start_time: value.start_time.into(),
