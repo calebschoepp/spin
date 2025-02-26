@@ -505,6 +505,10 @@ mod otel {
 
     impl From<wasi_otel::SpanData> for opentelemetry_sdk::export::trace::SpanData {
         fn from(value: wasi_otel::SpanData) -> Self {
+            let mut span_events = SpanEvents::default();
+            span_events.events = value.events.into_iter().map(Into::into).collect();
+            let mut span_links = SpanLinks::default();
+            span_links.links = value.links.into_iter().map(Into::into).collect();
             Self {
                 span_context: value.span_context.into(),
                 parent_span_id: opentelemetry::trace::SpanId::from_hex(&value.parent_span_id)
@@ -515,52 +519,10 @@ mod otel {
                 end_time: value.end_time.into(),
                 attributes: value.attributes.into_iter().map(Into::into).collect(),
                 dropped_attributes_count: 0,
-                events: SpanEvents::default(), // TODO
-                links: SpanLinks::default(),   // TODO
+                events: span_events,
+                links: span_links,
                 status: value.status.into(),
                 instrumentation_scope: value.instrumentation_scope.into(),
-            }
-        }
-    }
-
-    impl From<wasi_otel::Value> for opentelemetry::Value {
-        fn from(value: wasi_otel::Value) -> Self {
-            match value {
-                wasi_otel::Value::String(v) => v.into(),
-                wasi_otel::Value::Bool(v) => v.into(),
-                wasi_otel::Value::Float64(v) => v.into(),
-                wasi_otel::Value::S64(v) => v.into(),
-                wasi_otel::Value::StringArray(v) => opentelemetry::Value::Array(
-                    v.into_iter()
-                        .map(StringValue::from)
-                        .collect::<Vec<_>>()
-                        .into(),
-                ),
-                wasi_otel::Value::BoolArray(v) => opentelemetry::Value::Array(v.into()),
-                wasi_otel::Value::Float64Array(v) => opentelemetry::Value::Array(v.into()),
-                wasi_otel::Value::S64Array(v) => opentelemetry::Value::Array(v.into()),
-            }
-        }
-    }
-
-    impl From<wasi_otel::KeyValue> for opentelemetry::KeyValue {
-        fn from(kv: wasi_otel::KeyValue) -> Self {
-            opentelemetry::KeyValue::new(kv.key, kv.value)
-        }
-    }
-
-    impl From<wasi_otel::TraceFlags> for opentelemetry::trace::TraceFlags {
-        fn from(flags: wasi_otel::TraceFlags) -> Self {
-            Self::new(flags.as_array()[0] as u8)
-        }
-    }
-
-    impl From<opentelemetry::trace::TraceFlags> for wasi_otel::TraceFlags {
-        fn from(flags: opentelemetry::trace::TraceFlags) -> Self {
-            if flags.is_sampled() {
-                wasi_otel::TraceFlags::SAMPLED
-            } else {
-                wasi_otel::TraceFlags::empty()
             }
         }
     }
@@ -608,14 +570,18 @@ mod otel {
         }
     }
 
-    impl From<wasi_otel::Status> for opentelemetry::trace::Status {
-        fn from(status: wasi_otel::Status) -> Self {
-            match status {
-                wasi_otel::Status::Unset => Self::Unset,
-                wasi_otel::Status::Ok => Self::Ok,
-                wasi_otel::Status::Error(s) => Self::Error {
-                    description: s.into(),
-                },
+    impl From<wasi_otel::TraceFlags> for opentelemetry::trace::TraceFlags {
+        fn from(flags: wasi_otel::TraceFlags) -> Self {
+            Self::new(flags.as_array()[0] as u8)
+        }
+    }
+
+    impl From<opentelemetry::trace::TraceFlags> for wasi_otel::TraceFlags {
+        fn from(flags: opentelemetry::trace::TraceFlags) -> Self {
+            if flags.is_sampled() {
+                wasi_otel::TraceFlags::SAMPLED
+            } else {
+                wasi_otel::TraceFlags::empty()
             }
         }
     }
@@ -632,6 +598,43 @@ mod otel {
         }
     }
 
+    impl From<wasi_otel::KeyValue> for opentelemetry::KeyValue {
+        fn from(kv: wasi_otel::KeyValue) -> Self {
+            opentelemetry::KeyValue::new(kv.key, kv.value)
+        }
+    }
+
+    impl From<wasi_otel::Value> for opentelemetry::Value {
+        fn from(value: wasi_otel::Value) -> Self {
+            match value {
+                wasi_otel::Value::String(v) => v.into(),
+                wasi_otel::Value::Bool(v) => v.into(),
+                wasi_otel::Value::Float64(v) => v.into(),
+                wasi_otel::Value::S64(v) => v.into(),
+                wasi_otel::Value::StringArray(v) => opentelemetry::Value::Array(
+                    v.into_iter()
+                        .map(StringValue::from)
+                        .collect::<Vec<_>>()
+                        .into(),
+                ),
+                wasi_otel::Value::BoolArray(v) => opentelemetry::Value::Array(v.into()),
+                wasi_otel::Value::Float64Array(v) => opentelemetry::Value::Array(v.into()),
+                wasi_otel::Value::S64Array(v) => opentelemetry::Value::Array(v.into()),
+            }
+        }
+    }
+
+    impl From<wasi_otel::Event> for opentelemetry::trace::Event {
+        fn from(event: wasi_otel::Event) -> Self {
+            Self::new(
+                event.name,
+                event.time.into(),
+                event.attributes.into_iter().map(Into::into).collect(),
+                0,
+            )
+        }
+    }
+
     impl From<wasi_otel::Link> for opentelemetry::trace::Link {
         fn from(link: wasi_otel::Link) -> Self {
             Self::new(
@@ -642,11 +645,15 @@ mod otel {
         }
     }
 
-    impl From<wall_clock::Datetime> for SystemTime {
-        fn from(timestamp: wall_clock::Datetime) -> Self {
-            UNIX_EPOCH
-                + Duration::from_secs(timestamp.seconds)
-                + Duration::from_nanos(timestamp.nanoseconds as u64)
+    impl From<wasi_otel::Status> for opentelemetry::trace::Status {
+        fn from(status: wasi_otel::Status) -> Self {
+            match status {
+                wasi_otel::Status::Unset => Self::Unset,
+                wasi_otel::Status::Ok => Self::Ok,
+                wasi_otel::Status::Error(s) => Self::Error {
+                    description: s.into(),
+                },
+            }
         }
     }
 
@@ -666,45 +673,40 @@ mod otel {
         }
     }
 
-    // #[allow(clippy::derivable_impls)]
-    // impl Default for wasi_otel::StartOptions {
-    //     fn default() -> Self {
-    //         Self {
-    //             new_root: false,
-    //             span_kind: None,
-    //             attributes: None,
-    //             links: None,
-    //             timestamp: None,
-    //         }
-    //     }
-    // }
+    impl From<wall_clock::Datetime> for SystemTime {
+        fn from(timestamp: wall_clock::Datetime) -> Self {
+            UNIX_EPOCH
+                + Duration::from_secs(timestamp.seconds)
+                + Duration::from_nanos(timestamp.nanoseconds as u64)
+        }
+    }
 
-    // mod test {
-    //     #[test]
-    //     fn trace_flags() {
-    //         let flags = opentelemetry::trace::TraceFlags::SAMPLED;
-    //         let flags2 = crate::wasi::otel::tracing::TraceFlags::from(flags);
-    //         let flags3 = opentelemetry::trace::TraceFlags::from(flags2);
-    //         assert_eq!(flags, flags3);
-    //     }
+    mod test {
+        #[test]
+        fn trace_flags() {
+            let flags = opentelemetry::trace::TraceFlags::SAMPLED;
+            let flags2 = crate::wasi::otel::tracing::TraceFlags::from(flags);
+            let flags3 = opentelemetry::trace::TraceFlags::from(flags2);
+            assert_eq!(flags, flags3);
+        }
 
-    //     #[test]
-    //     fn span_context() {
-    //         let sc = opentelemetry::trace::SpanContext::new(
-    //             opentelemetry::trace::TraceId::from_hex("4fb34cb4484029f7881399b149e41e98")
-    //                 .unwrap(),
-    //             opentelemetry::trace::SpanId::from_hex("9ffd58d3cd4dd90b").unwrap(),
-    //             opentelemetry::trace::TraceFlags::SAMPLED,
-    //             false,
-    //             opentelemetry::trace::TraceState::from_key_value(vec![
-    //                 ("foo", "bar"),
-    //                 ("baz", "qux"),
-    //             ])
-    //             .unwrap(),
-    //         );
-    //         let sc2 = crate::wasi::otel::tracing::SpanContext::from(sc.clone());
-    //         let sc3 = opentelemetry::trace::SpanContext::from(sc2);
-    //         assert_eq!(sc, sc3);
-    //     }
-    // }
+        #[test]
+        fn span_context() {
+            let sc = opentelemetry::trace::SpanContext::new(
+                opentelemetry::trace::TraceId::from_hex("4fb34cb4484029f7881399b149e41e98")
+                    .unwrap(),
+                opentelemetry::trace::SpanId::from_hex("9ffd58d3cd4dd90b").unwrap(),
+                opentelemetry::trace::TraceFlags::SAMPLED,
+                false,
+                opentelemetry::trace::TraceState::from_key_value(vec![
+                    ("foo", "bar"),
+                    ("baz", "qux"),
+                ])
+                .unwrap(),
+            );
+            let sc2 = crate::wasi::otel::tracing::SpanContext::from(sc.clone());
+            let sc3 = opentelemetry::trace::SpanContext::from(sc2);
+            assert_eq!(sc, sc3);
+        }
+    }
 }
