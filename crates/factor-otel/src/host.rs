@@ -5,7 +5,6 @@ use anyhow::Result;
 use opentelemetry::trace::TraceContextExt;
 use opentelemetry::Context;
 use opentelemetry_sdk::trace::SpanProcessor;
-use spin_core::async_trait;
 use spin_world::wasi::otel::tracing as wasi_otel;
 use spin_world::wasi::otel::tracing::SpanContext;
 use tracing::span;
@@ -14,7 +13,6 @@ use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 use crate::InstanceState;
 
-#[async_trait]
 impl wasi_otel::Host for InstanceState {
     async fn on_start(
         &mut self,
@@ -115,5 +113,3 @@ impl wasi_otel::Host for InstanceState {
             .into())
     }
 }
-
-// TODO: Rename module to otel

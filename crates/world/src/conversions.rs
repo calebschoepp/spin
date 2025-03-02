@@ -609,7 +609,7 @@ mod otel {
             match value {
                 wasi_otel::Value::String(v) => v.into(),
                 wasi_otel::Value::Bool(v) => v.into(),
-                wasi_otel::Value::Float64(v) => v.into(),
+                wasi_otel::Value::F64(v) => v.into(),
                 wasi_otel::Value::S64(v) => v.into(),
                 wasi_otel::Value::StringArray(v) => opentelemetry::Value::Array(
                     v.into_iter()
@@ -618,7 +618,7 @@ mod otel {
                         .into(),
                 ),
                 wasi_otel::Value::BoolArray(v) => opentelemetry::Value::Array(v.into()),
-                wasi_otel::Value::Float64Array(v) => opentelemetry::Value::Array(v.into()),
+                wasi_otel::Value::F64Array(v) => opentelemetry::Value::Array(v.into()),
                 wasi_otel::Value::S64Array(v) => opentelemetry::Value::Array(v.into()),
             }
         }
