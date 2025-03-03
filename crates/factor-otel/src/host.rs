@@ -27,11 +27,11 @@ impl wasi_otel::Host for InstanceState {
             );
         }
 
-        // Put the span in our map and push it on to our stack of active spans TODO: Fix comment
+        // Track the guest spans context in our ordered map
         let span_context: opentelemetry::trace::SpanContext = span_data.span_context.into();
-        let span_id = span_context.span_id();
-        state.guest_span_contexts.insert(span_id, span_context);
-        state.active_spans.insert(span_id);
+        state
+            .guest_span_contexts
+            .insert(span_context.span_id(), span_context);
 
         Ok(())
     }
@@ -42,17 +42,13 @@ impl wasi_otel::Host for InstanceState {
         let span_context: opentelemetry::trace::SpanContext = span_data.span_context.clone().into();
         let span_id: opentelemetry::trace::SpanId = span_context.span_id();
 
+        if state.guest_span_contexts.shift_remove(&span_id).is_none() {
+            Err(anyhow!("Trying to end a span that was not started"))?;
+        }
+
         self.processor.on_end(span_data.into());
 
-        if let Some(_guest_span) = state.guest_span_contexts.get_mut(&span_id) {
-            // Remove the span from active_spans
-            state.active_spans.shift_remove(&span_id);
-
-            Ok(())
-        } else {
-            // TODO: This seems to be wrong
-            Err(anyhow!("BUG: cannot find resource in table"))
-        }
+        Ok(())
     }
 
     async fn current_span_context(&mut self) -> Result<wasi_otel::SpanContext> {

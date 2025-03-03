@@ -1,13 +1,12 @@
 mod host;
 
 use std::{
-    collections::HashMap,
     sync::{Arc, RwLock},
     time::Duration,
 };
 
 use anyhow::bail;
-use indexmap::IndexSet;
+use indexmap::IndexMap;
 use opentelemetry::{
     trace::{SpanContext, SpanId, TraceContextExt},
     Context,
@@ -53,7 +52,6 @@ impl Factor for OtelFactor {
         Ok(InstanceState {
             state: Arc::new(RwLock::new(State {
                 guest_span_contexts: Default::default(),
-                active_spans: Default::default(),
                 original_host_span_id: None,
             })),
             processor: self.processor.clone(),
@@ -63,7 +61,6 @@ impl Factor for OtelFactor {
 
 impl OtelFactor {
     pub fn new() -> anyhow::Result<Self> {
-        // TODO: Configuring the processor should move to init
         // This will configure the exporter based on the OTEL_EXPORTER_* environment variables.
         let exporter = match OtlpProtocol::traces_protocol_from_env() {
             OtlpProtocol::Grpc => opentelemetry_otlp::SpanExporter::builder()
@@ -111,16 +108,13 @@ impl SelfInstanceBuilder for InstanceState {}
 /// This data lives here rather than directly on InstanceState so that we can have multiple things
 /// take Arc references to it.
 pub(crate) struct State {
-    /// A mapping between immutable [SpanId]s and the actual [BoxedSpan] created by our tracer.
-    // TODO: Rename to not include "guest"
-    // TODO: Merge with active_spans
-    pub(crate) guest_span_contexts: HashMap<SpanId, SpanContext>,
-
-    /// A stack of [SpanIds] for all the active spans. The topmost span is the active span.
+    /// An order-preserved mapping between immutable [SpanId]s of guest created spans and their
+    /// corresponding [SpanContext].
     ///
-    /// When a span is ended it is removed from this stack (regardless of whether is the
-    /// active span) and all other spans are shifted back to retain relative order.
-    pub(crate) active_spans: IndexSet<SpanId>,
+    /// The topmost [SpanId] is the last active span. When a span is ended it is removed from this
+    /// map (regardless of whether it is the active span) and all other spans are shifted back to
+    /// retain relative order.
+    pub(crate) guest_span_contexts: IndexMap<SpanId, SpanContext>,
 
     /// Id of the last span emitted from within the host before entering the guest.
     ///
@@ -128,12 +122,6 @@ pub(crate) struct State {
     /// span.
     pub(crate) original_host_span_id: Option<SpanId>,
 }
-
-// /// The WIT resource Span. Effectively wraps an [opentelemetry::global::BoxedSpan].
-// pub struct GuestSpan {
-//     /// The [opentelemetry::global::BoxedSpan] we use to do the actual tracing work.
-//     pub inner: BoxedSpan,
-// }
 
 /// Manages access to the OtelFactor state for the purpose of maintaining proper span
 /// parent/child relationships when WASI Otel spans are being created.
@@ -170,10 +158,10 @@ impl OtelContext {
     ///          | spin_key_value.get |
     /// ```
     ///
-    ///  Setting the guest spans parent as the host is trivially done. However, the more difficult
-    /// task is having the host factor spans be children of the guest span.
-    /// [`OtelContext::reparent_tracing_span`] handles this by reparenting the current span to be
-    /// a child of the last active guest span (which is tracked internally in the otel factor).
+    ///  Setting the guest spans parent as the host is enabled through current_span_context.
+    /// However, the more difficult task is having the host factor spans be children of the guest
+    /// span. [`OtelContext::reparent_tracing_span`] handles this by reparenting the current span to
+    /// be a child of the last active guest span (which is tracked internally in the otel factor).
     ///
     /// Note that if the otel factor is not in your [`RuntimeFactors`] than this is effectively a
     /// no-op.
@@ -191,7 +179,7 @@ impl OtelContext {
         };
 
         // If there are no active guest spans then there is nothing to do
-        let Some(active_span) = state.active_spans.last() else {
+        let Some((_, active_span_context)) = state.guest_span_contexts.last() else {
             return;
         };
 
@@ -209,8 +197,7 @@ impl OtelContext {
         }
 
         // Now reparent the current span to the last active guest span
-        let span_context = state.guest_span_contexts.get(active_span).unwrap().clone();
-        let parent_context = Context::new().with_remote_span_context(span_context);
+        let parent_context = Context::new().with_remote_span_context(active_span_context.clone());
         tracing::Span::current().set_parent(parent_context);
     }
 }
