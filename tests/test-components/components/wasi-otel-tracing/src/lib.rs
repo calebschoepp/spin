@@ -52,10 +52,6 @@ fn nested_spans(_req: Request, _params: Params) -> Response {
     Response::new(200, "")
 }
 
-// TODO: Test what happens if start is called but not end
-// TODO: Test what happens if end is called but not start
-// TODO: What happens if child span outlives parent
-
 fn setting_attributes(_req: Request, _params: Params) -> Response {
     let (tracer, _ctx) = setup_tracer(true);
     tracer.in_span("setting_attributes", |cx| {
@@ -128,3 +124,7 @@ async fn make_request() {
         .build();
     let _res: Response = spin_sdk::http::send(req).await.unwrap();
 }
+
+// TODO: Test what happens if start is called but not end
+// TODO: Test what happens if end is called but not start
+// TODO: What happens if child span outlives parent

@@ -1399,7 +1399,6 @@ route = "/..."
     }
 }
 
-// TODO(Reviewer): How can I move this to a new file? I wasn't able to get the imports to work out.
 mod otel_integration_tests {
     use fake_opentelemetry_collector::FakeCollectorServer;
     use std::time::Duration;
