@@ -507,8 +507,10 @@ mod otel {
         fn from(value: wasi_otel::SpanData) -> Self {
             let mut span_events = SpanEvents::default();
             span_events.events = value.events.into_iter().map(Into::into).collect();
+            span_events.dropped_count = value.dropped_events;
             let mut span_links = SpanLinks::default();
             span_links.links = value.links.into_iter().map(Into::into).collect();
+            span_links.dropped_count = value.dropped_links;
             Self {
                 span_context: value.span_context.into(),
                 parent_span_id: opentelemetry::trace::SpanId::from_hex(&value.parent_span_id)
@@ -518,7 +520,7 @@ mod otel {
                 start_time: value.start_time.into(),
                 end_time: value.end_time.into(),
                 attributes: value.attributes.into_iter().map(Into::into).collect(),
-                dropped_attributes_count: 0,
+                dropped_attributes_count: value.dropped_attributes,
                 events: span_events,
                 links: span_links,
                 status: value.status.into(),
@@ -529,7 +531,6 @@ mod otel {
 
     impl From<wasi_otel::SpanContext> for opentelemetry::trace::SpanContext {
         fn from(sc: wasi_otel::SpanContext) -> Self {
-            // TODO(Reviewer): Should this be try_from instead an propagate this error out of the WIT?
             let trace_id = opentelemetry::trace::TraceId::from_hex(&sc.trace_id)
                 .unwrap_or(opentelemetry::trace::TraceId::INVALID);
             let span_id = opentelemetry::trace::SpanId::from_hex(&sc.span_id)
@@ -557,7 +558,6 @@ mod otel {
                     .trace_state()
                     .header()
                     .split(',')
-                    // TODO(Reviewer): Should this be try_from instead an propagate this error out of the WIT?
                     .filter_map(|s| {
                         if let Some((key, value)) = s.split_once('=') {
                             Some((key.to_string(), value.to_string()))
