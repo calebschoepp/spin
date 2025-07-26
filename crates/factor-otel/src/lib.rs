@@ -11,7 +11,7 @@ use opentelemetry::{
     Context,
 };
 use opentelemetry_sdk::{
-    resource::{EnvResourceDetector, TelemetryResourceDetector},
+    resource::{EnvResourceDetector, ResourceDetector, TelemetryResourceDetector},
     trace::{BatchSpanProcessor, SpanProcessor},
     Resource,
 };
@@ -56,6 +56,21 @@ impl Factor for OtelFactor {
 
 impl OtelFactor {
     pub fn new() -> anyhow::Result<Self> {
+        // This is a hack b/c we know the version of this crate will be the same as the version of Spin
+        let spin_version = env!("CARGO_PKG_VERSION").to_string();
+
+        let resource = Resource::builder()
+        .with_detectors(&[
+            // Set service.name from env OTEL_SERVICE_NAME > env OTEL_RESOURCE_ATTRIBUTES > spin
+            // Set service.version from Spin metadata
+            Box::new(SpinResourceDetector::new(spin_version)) as Box<dyn ResourceDetector>,
+            // Sets fields from env OTEL_RESOURCE_ATTRIBUTES
+            Box::new(EnvResourceDetector::new()),
+            // Sets telemetry.sdk{name, language, version}
+            Box::new(TelemetryResourceDetector),
+        ])
+        .build();
+
         // This will configure the exporter based on the OTEL_EXPORTER_* environment variables.
         let exporter = match OtlpProtocol::traces_protocol_from_env() {
             OtlpProtocol::Grpc => opentelemetry_otlp::SpanExporter::builder()
@@ -69,20 +84,7 @@ impl OtelFactor {
 
         let mut processor = opentelemetry_sdk::trace::BatchSpanProcessor::builder(exporter).build();
 
-        // This is a hack b/c we know the version of this crate will be the same as the version of Spin
-        let spin_version = env!("CARGO_PKG_VERSION").to_string();
-
-        let detectors: &[Box<dyn opentelemetry_sdk::resource::ResourceDetector>; 3] = &[
-                // Set service.name from env OTEL_SERVICE_NAME > env OTEL_RESOURCE_ATTRIBUTES > spin
-                // Set service.version from Spin metadata
-                Box::new(SpinResourceDetector::new(spin_version)),
-                // Sets fields from env OTEL_RESOURCE_ATTRIBUTES
-                Box::new(EnvResourceDetector::new()),
-                // Sets telemetry.sdk{name, language, version}
-                Box::new(TelemetryResourceDetector),
-        ];
-
-        processor.set_resource(&Resource::builder().with_detectors(detectors).build());
+        processor.set_resource(&resource);
 
         Ok(Self {
             processor: Arc::new(processor),
