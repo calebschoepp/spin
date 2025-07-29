@@ -1,19 +1,18 @@
 mod host;
 
-use std::{
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
 use anyhow::bail;
 use indexmap::IndexMap;
 use opentelemetry::{
-    trace::{SpanContext, SpanId, TraceContextExt}, Context
+    trace::{SpanContext, SpanId, TraceContextExt},
+    Context,
 };
 use opentelemetry_sdk::{
     metrics::SdkMeterProvider,
     resource::{EnvResourceDetector, ResourceDetector, TelemetryResourceDetector},
     trace::{BatchSpanProcessor, SpanProcessor},
-    Resource
+    Resource,
 };
 use spin_factors::{Factor, FactorData, PrepareContext, RuntimeFactors, SelfInstanceBuilder};
 use spin_telemetry::{detector::SpinResourceDetector, env::OtlpProtocol};
@@ -62,17 +61,16 @@ impl OtelFactor {
         let spin_version = env!("CARGO_PKG_VERSION").to_string();
 
         let resource = Resource::builder()
-        .with_detectors(&[
-            // Set service.name from env OTEL_SERVICE_NAME > env OTEL_RESOURCE_ATTRIBUTES > spin
-            // Set service.version from Spin metadata
-            Box::new(SpinResourceDetector::new(spin_version)) as Box<dyn ResourceDetector>,
-            // Sets fields from env OTEL_RESOURCE_ATTRIBUTES
-            Box::new(EnvResourceDetector::new()),
-            // Sets telemetry.sdk{name, language, version}
-            Box::new(TelemetryResourceDetector),
-        ])
-        .build();
-
+            .with_detectors(&[
+                // Set service.name from env OTEL_SERVICE_NAME > env OTEL_RESOURCE_ATTRIBUTES > spin
+                // Set service.version from Spin metadata
+                Box::new(SpinResourceDetector::new(spin_version)) as Box<dyn ResourceDetector>,
+                // Sets fields from env OTEL_RESOURCE_ATTRIBUTES
+                Box::new(EnvResourceDetector::new()),
+                // Sets telemetry.sdk{name, language, version}
+                Box::new(TelemetryResourceDetector),
+            ])
+            .build();
 
         // ###############
         // ### TRACING ###
@@ -92,7 +90,6 @@ impl OtelFactor {
 
         processor.set_resource(&resource);
 
-
         // ###############
         // ### METRICS ###
         // ###############
@@ -107,9 +104,9 @@ impl OtelFactor {
         };
 
         let meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
-        .with_periodic_exporter(metric_exporter)
-        .with_resource(resource)
-        .build();
+            .with_periodic_exporter(metric_exporter)
+            .with_resource(resource)
+            .build();
 
         Ok(Self {
             processor: Arc::new(processor),

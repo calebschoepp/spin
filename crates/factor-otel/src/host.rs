@@ -55,12 +55,14 @@ impl wasi::otel::tracing::Host for InstanceState {
             .clone()
             .into())
     }
-
 }
 
 impl wasi::otel::metrics::Host for InstanceState {
     // BEGIN METRICS
-    async fn export(&mut self, metrics: wasi::otel::metrics::ResourceMetrics) -> Result<(), wasi::otel::metrics::MetricError> {
-        self.exporter.
+    async fn export(
+        &mut self,
+        metrics: wasi::otel::metrics::ResourceMetrics,
+    ) -> Result<Result<(), wasi::otel::metrics::MetricError>, anyhow::Error> {
+        todo!()
     }
 }
