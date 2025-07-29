@@ -2,14 +2,14 @@ use anyhow::anyhow;
 use anyhow::Result;
 use opentelemetry::trace::TraceContextExt;
 use opentelemetry_sdk::trace::SpanProcessor;
-use spin_world::wasi::otel::tracing as wasi_otel;
+use spin_world::wasi;
 
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 use crate::InstanceState;
 
-impl wasi_otel::Host for InstanceState {
-    async fn on_start(&mut self, context: wasi_otel::SpanContext) -> Result<()> {
+impl wasi::otel::tracing::Host for InstanceState {
+    async fn on_start(&mut self, context: wasi::otel::tracing::SpanContext) -> Result<()> {
         let mut state = self.state.write().unwrap();
 
         // Before we do anything make sure we track the original host span ID for reparenting
@@ -32,7 +32,7 @@ impl wasi_otel::Host for InstanceState {
         Ok(())
     }
 
-    async fn on_end(&mut self, span_data: wasi_otel::SpanData) -> Result<()> {
+    async fn on_end(&mut self, span_data: wasi::otel::tracing::SpanData) -> Result<()> {
         let mut state = self.state.write().unwrap();
 
         let span_context: opentelemetry::trace::SpanContext = span_data.span_context.clone().into();
@@ -47,12 +47,20 @@ impl wasi_otel::Host for InstanceState {
         Ok(())
     }
 
-    async fn outer_span_context(&mut self) -> Result<wasi_otel::SpanContext> {
+    async fn outer_span_context(&mut self) -> Result<wasi::otel::tracing::SpanContext> {
         Ok(tracing::Span::current()
             .context()
             .span()
             .span_context()
             .clone()
             .into())
+    }
+
+}
+
+impl wasi::otel::metrics::Host for InstanceState {
+    // BEGIN METRICS
+    async fn export(&mut self, metrics: wasi::otel::metrics::ResourceMetrics) -> Result<(), wasi::otel::metrics::MetricError> {
+        self.exporter.
     }
 }

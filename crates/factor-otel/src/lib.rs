@@ -7,13 +7,13 @@ use std::{
 use anyhow::bail;
 use indexmap::IndexMap;
 use opentelemetry::{
-    trace::{SpanContext, SpanId, TraceContextExt},
-    Context,
+    trace::{SpanContext, SpanId, TraceContextExt}, Context
 };
 use opentelemetry_sdk::{
+    metrics::SdkMeterProvider,
     resource::{EnvResourceDetector, ResourceDetector, TelemetryResourceDetector},
     trace::{BatchSpanProcessor, SpanProcessor},
-    Resource,
+    Resource
 };
 use spin_factors::{Factor, FactorData, PrepareContext, RuntimeFactors, SelfInstanceBuilder};
 use spin_telemetry::{detector::SpinResourceDetector, env::OtlpProtocol};
@@ -21,6 +21,7 @@ use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 pub struct OtelFactor {
     processor: Arc<BatchSpanProcessor>,
+    exporter: Arc<SdkMeterProvider>,
 }
 
 impl Factor for OtelFactor {
@@ -50,6 +51,7 @@ impl Factor for OtelFactor {
                 original_host_span_id: None,
             })),
             processor: self.processor.clone(),
+            exporter: self.exporter.to_owned(),
         })
     }
 }
@@ -71,6 +73,10 @@ impl OtelFactor {
         ])
         .build();
 
+
+        // ###############
+        // ### TRACING ###
+        // ###############
         // This will configure the exporter based on the OTEL_EXPORTER_* environment variables.
         let exporter = match OtlpProtocol::traces_protocol_from_env() {
             OtlpProtocol::Grpc => opentelemetry_otlp::SpanExporter::builder()
@@ -86,8 +92,28 @@ impl OtelFactor {
 
         processor.set_resource(&resource);
 
+
+        // ###############
+        // ### METRICS ###
+        // ###############
+        let metric_exporter = match OtlpProtocol::metrics_protocol_from_env() {
+            OtlpProtocol::Grpc => opentelemetry_otlp::MetricExporter::builder()
+                .with_tonic()
+                .build()?,
+            OtlpProtocol::HttpProtobuf => opentelemetry_otlp::MetricExporter::builder()
+                .with_http()
+                .build()?,
+            OtlpProtocol::HttpJson => bail!("http/json OTLP protocol is not supported"),
+        };
+
+        let meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
+        .with_periodic_exporter(metric_exporter)
+        .with_resource(resource)
+        .build();
+
         Ok(Self {
             processor: Arc::new(processor),
+            exporter: Arc::new(meter_provider),
         })
     }
 }
@@ -95,6 +121,7 @@ impl OtelFactor {
 pub struct InstanceState {
     pub(crate) state: Arc<RwLock<State>>,
     pub(crate) processor: Arc<BatchSpanProcessor>,
+    pub(crate) exporter: Arc<SdkMeterProvider>,
 }
 
 impl SelfInstanceBuilder for InstanceState {}
