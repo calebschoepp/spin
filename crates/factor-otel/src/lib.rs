@@ -1,7 +1,5 @@
 mod host;
 
-use std::sync::{Arc, RwLock};
-
 use anyhow::bail;
 use indexmap::IndexMap;
 use opentelemetry::{
@@ -9,18 +7,19 @@ use opentelemetry::{
     Context,
 };
 use opentelemetry_sdk::{
-    metrics::SdkMeterProvider,
+    metrics::PeriodicReader,
     resource::{EnvResourceDetector, ResourceDetector, TelemetryResourceDetector},
     trace::{BatchSpanProcessor, SpanProcessor},
     Resource,
 };
 use spin_factors::{Factor, FactorData, PrepareContext, RuntimeFactors, SelfInstanceBuilder};
 use spin_telemetry::{detector::SpinResourceDetector, env::OtlpProtocol};
+use std::sync::{Arc, RwLock};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 pub struct OtelFactor {
-    processor: Arc<BatchSpanProcessor>,
-    exporter: Arc<SdkMeterProvider>,
+    span_processor: Arc<BatchSpanProcessor>,
+    metric_reader: Arc<PeriodicReader>,
 }
 
 impl Factor for OtelFactor {
@@ -49,8 +48,8 @@ impl Factor for OtelFactor {
                 guest_span_contexts: Default::default(),
                 original_host_span_id: None,
             })),
-            processor: self.processor.clone(),
-            exporter: self.exporter.to_owned(),
+            span_processor: self.span_processor.clone(),
+            metric_reader: self.metric_reader.to_owned(),
         })
     }
 }
@@ -72,11 +71,8 @@ impl OtelFactor {
             ])
             .build();
 
-        // ###############
-        // ### TRACING ###
-        // ###############
         // This will configure the exporter based on the OTEL_EXPORTER_* environment variables.
-        let exporter = match OtlpProtocol::traces_protocol_from_env() {
+        let span_exporter = match OtlpProtocol::traces_protocol_from_env() {
             OtlpProtocol::Grpc => opentelemetry_otlp::SpanExporter::builder()
                 .with_tonic()
                 .build()?,
@@ -86,13 +82,11 @@ impl OtelFactor {
             OtlpProtocol::HttpJson => bail!("http/json OTLP protocol is not supported"),
         };
 
-        let mut processor = opentelemetry_sdk::trace::BatchSpanProcessor::builder(exporter).build();
+        let mut span_processor =
+            opentelemetry_sdk::trace::BatchSpanProcessor::builder(span_exporter).build();
 
-        processor.set_resource(&resource);
+        span_processor.set_resource(&resource);
 
-        // ###############
-        // ### METRICS ###
-        // ###############
         let metric_exporter = match OtlpProtocol::metrics_protocol_from_env() {
             OtlpProtocol::Grpc => opentelemetry_otlp::MetricExporter::builder()
                 .with_tonic()
@@ -103,22 +97,23 @@ impl OtelFactor {
             OtlpProtocol::HttpJson => bail!("http/json OTLP protocol is not supported"),
         };
 
-        let meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
-            .with_periodic_exporter(metric_exporter)
-            .with_resource(resource)
+        // TODO: my hypothesis is that the PeriodicReader is sufficient, and we don't need a MeterProvider
+        // Also, there wasn't a way to include the `[metric_exporter]` in a ManualReader, so I opted for PeriodicReader instead
+        let metric_reader = PeriodicReader::builder(metric_exporter)
+            .with_interval(std::time::Duration::from_secs(5)) // TODO: If there is a way, do we want to give the user the ability to control this?
             .build();
 
         Ok(Self {
-            processor: Arc::new(processor),
-            exporter: Arc::new(meter_provider),
+            span_processor: Arc::new(span_processor),
+            metric_reader: Arc::new(metric_reader),
         })
     }
 }
 
 pub struct InstanceState {
     pub(crate) state: Arc<RwLock<State>>,
-    pub(crate) processor: Arc<BatchSpanProcessor>,
-    pub(crate) exporter: Arc<SdkMeterProvider>,
+    pub(crate) span_processor: Arc<BatchSpanProcessor>,
+    pub(crate) metric_reader: Arc<PeriodicReader>,
 }
 
 impl SelfInstanceBuilder for InstanceState {}

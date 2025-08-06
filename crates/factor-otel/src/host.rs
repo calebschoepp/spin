@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use anyhow::Result;
 use opentelemetry::trace::TraceContextExt;
+use opentelemetry_sdk::metrics::reader::MetricReader;
 use opentelemetry_sdk::trace::SpanProcessor;
 use spin_world::wasi;
 
@@ -42,7 +43,7 @@ impl wasi::otel::tracing::Host for InstanceState {
             Err(anyhow!("Trying to end a span that was not started"))?;
         }
 
-        self.processor.on_end(span_data.into());
+        self.span_processor.on_end(span_data.into());
 
         Ok(())
     }
@@ -58,11 +59,29 @@ impl wasi::otel::tracing::Host for InstanceState {
 }
 
 impl wasi::otel::metrics::Host for InstanceState {
-    // BEGIN METRICS
     async fn export(
         &mut self,
         metrics: wasi::otel::metrics::ResourceMetrics,
     ) -> Result<Result<(), wasi::otel::metrics::MetricError>, anyhow::Error> {
-        todo!()
+        use opentelemetry_sdk::metrics::MetricError as M;
+        match self.metric_reader.collect(metrics.into()) {
+            Ok(_) => (),
+            Err(e) => match e {
+                M::ExportErr(v) => return Err(anyhow!("Export error: {}", v.to_string())),
+                M::Config(v) => return Err(anyhow!("Config error: {}", v)),
+                M::InvalidInstrumentConfiguration(v) => {
+                    return Err(anyhow!(
+                        "Invalid Instrument Configuration error: {}",
+                        v.to_string()
+                    ))
+                }
+                M::Other(v) => return Err(anyhow!("Other error: {}", v)),
+                _ => panic!("unrecognized error type"),
+            },
+        };
+
+        self.metric_reader.force_flush(); // TODO: Test whether force_flush is required, or if the PeriodicReader flushes on its own
+
+        Ok(Ok(()))
     }
 }
