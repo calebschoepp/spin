@@ -567,7 +567,97 @@ mod otel {
     }
 
     impl From<wasi_metrics::MetricData> for Box<dyn opentelemetry_sdk::metrics::data::Aggregation> {
-        fn from(value: wasi_metrics::MetricData) -> Self {}
+        fn from(value: wasi_metrics::MetricData) -> Self {
+            use opentelemetry_sdk::metrics::data as O;
+            use wasi_metrics::MetricData as M;
+            use wasi_metrics::MetricNumber as N;
+            match value {
+                M::Gauge(gauge) => {
+                    if gauge.data_points.is_empty() {
+                        let gauge: O::Gauge<f64> = gauge.into();
+                        return Box::new(gauge);
+                    }
+
+                    match gauge.data_points[0].value {
+                        N::F64(_) => {
+                            let gauge: O::Gauge<f64> = gauge.into();
+                            return Box::new(gauge);
+                        }
+                        N::U64(_) => {
+                            let gauge: O::Gauge<u64> = gauge.into();
+                            return Box::new(gauge);
+                        }
+                        N::S64(_) => {
+                            let gauge: O::Gauge<i64> = gauge.into();
+                            return Box::new(gauge);
+                        }
+                    }
+                }
+                M::Sum(sum) => {
+                    if sum.data_points.is_empty() {
+                        let sum: O::Sum<f64> = sum.into();
+                        return Box::new(sum);
+                    }
+
+                    match sum.data_points[0].value {
+                        N::F64(_) => {
+                            let sum: O::Sum<f64> = sum.into();
+                            return Box::new(sum);
+                        }
+                        N::U64(_) => {
+                            let sum: O::Sum<u64> = sum.into();
+                            return Box::new(sum);
+                        }
+                        N::S64(_) => {
+                            let sum: O::Sum<i64> = sum.into();
+                            return Box::new(sum);
+                        }
+                    }
+                }
+                M::Histogram(hist) => {
+                    if hist.data_points.is_empty() {
+                        let hist: O::Histogram<f64> = hist.into();
+                        return Box::new(hist);
+                    }
+
+                    match hist.data_points[0].sum {
+                        N::F64(_) => {
+                            let hist: O::Histogram<f64> = hist.into();
+                            return Box::new(hist);
+                        }
+                        N::U64(_) => {
+                            let hist: O::Histogram<u64> = hist.into();
+                            return Box::new(hist);
+                        }
+                        N::S64(_) => {
+                            let hist: O::Histogram<i64> = hist.into();
+                            return Box::new(hist);
+                        }
+                    }
+                }
+                M::ExponentialHistogram(hist) => {
+                    if hist.data_points.is_empty() {
+                        let hist: O::ExponentialHistogram<f64> = hist.into();
+                        return Box::new(hist);
+                    }
+
+                    match hist.data_points[0].sum {
+                        N::F64(_) => {
+                            let hist: O::ExponentialHistogram<f64> = hist.into();
+                            return Box::new(hist);
+                        }
+                        N::U64(_) => {
+                            let hist: O::ExponentialHistogram<u64> = hist.into();
+                            return Box::new(hist);
+                        }
+                        N::S64(_) => {
+                            let hist: O::ExponentialHistogram<i64> = hist.into();
+                            return Box::new(hist);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     impl From<wasi_metrics::Gauge> for opentelemetry_sdk::metrics::data::Gauge<f64> {

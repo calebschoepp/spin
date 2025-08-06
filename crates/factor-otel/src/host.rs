@@ -63,8 +63,9 @@ impl wasi::otel::metrics::Host for InstanceState {
         &mut self,
         metrics: wasi::otel::metrics::ResourceMetrics,
     ) -> Result<Result<(), wasi::otel::metrics::MetricError>, anyhow::Error> {
+        use opentelemetry_sdk::error::OTelSdkError as O;
         use opentelemetry_sdk::metrics::MetricError as M;
-        match self.metric_reader.collect(metrics.into()) {
+        match self.metric_reader.collect(&mut metrics.into()) {
             Ok(_) => (),
             Err(e) => match e {
                 M::ExportErr(v) => return Err(anyhow!("Export error: {}", v.to_string())),
@@ -80,8 +81,14 @@ impl wasi::otel::metrics::Host for InstanceState {
             },
         };
 
-        self.metric_reader.force_flush(); // TODO: Test whether force_flush is required, or if the PeriodicReader flushes on its own
-
-        Ok(Ok(()))
+        // TODO: Test whether force_flush is required, or if the PeriodicReader flushes on its own
+        match self.metric_reader.force_flush() {
+            Ok(_) => Ok(Ok(())),
+            Err(e) => match e {
+                O::AlreadyShutdown => Err(anyhow!("Already Shutdown")),
+                O::InternalFailure(v) => Err(anyhow!("Internal Failure: {}", v)),
+                O::Timeout(v) => Err(anyhow!("Timed out after {}", v.as_secs())),
+            },
+        }
     }
 }
