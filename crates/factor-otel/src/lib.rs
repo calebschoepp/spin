@@ -29,6 +29,7 @@ impl Factor for OtelFactor {
 
     fn init(&mut self, ctx: &mut impl spin_factors::InitContext<Self>) -> anyhow::Result<()> {
         ctx.link_bindings(spin_world::wasi::otel::tracing::add_to_linker::<_, FactorData<Self>>)?;
+        ctx.link_bindings(spin_world::wasi::otel::metrics::add_to_linker::<_, FactorData<Self>>)?;
         Ok(())
     }
 
