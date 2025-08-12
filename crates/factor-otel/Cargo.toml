@@ -18,6 +18,7 @@ spin-world = { path = "../world" }
 tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 async-trait = { workspace = true }
+tokio = { workspace = true }
 
 [dev-dependencies]
 toml = "0.5"

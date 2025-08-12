@@ -7,9 +7,10 @@ use opentelemetry::{
     Context,
 };
 use opentelemetry_sdk::{
-    metrics::PeriodicReader,
+    metrics::periodic_reader_with_async_runtime::PeriodicReader,
     resource::{EnvResourceDetector, ResourceDetector, TelemetryResourceDetector},
-    trace::{BatchSpanProcessor, SpanProcessor},
+    runtime::Tokio,
+    trace::{span_processor_with_async_runtime::BatchSpanProcessor, SpanProcessor},
     Resource,
 };
 use spin_factors::{Factor, FactorData, PrepareContext, RuntimeFactors, SelfInstanceBuilder};
@@ -18,7 +19,7 @@ use std::sync::{Arc, RwLock};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 pub struct OtelFactor {
-    span_processor: Arc<BatchSpanProcessor>,
+    span_processor: Arc<BatchSpanProcessor<Tokio>>,
     metric_reader: Arc<PeriodicReader>,
 }
 
@@ -50,7 +51,7 @@ impl Factor for OtelFactor {
                 original_host_span_id: None,
             })),
             span_processor: self.span_processor.clone(),
-            metric_reader: self.metric_reader.to_owned(),
+            metric_reader: self.metric_reader.clone(),
         })
     }
 }
@@ -83,8 +84,7 @@ impl OtelFactor {
             OtlpProtocol::HttpJson => bail!("http/json OTLP protocol is not supported"),
         };
 
-        let mut span_processor =
-            opentelemetry_sdk::trace::BatchSpanProcessor::builder(span_exporter).build();
+        let mut span_processor = BatchSpanProcessor::builder(span_exporter, Tokio).build();
 
         span_processor.set_resource(&resource);
 
@@ -99,8 +99,7 @@ impl OtelFactor {
         };
 
         // TODO: my hypothesis is that the PeriodicReader is sufficient, and we don't need a MeterProvider
-        // Also, there wasn't a way to include the `[metric_exporter]` in a ManualReader, so I opted for PeriodicReader instead
-        let metric_reader = PeriodicReader::builder(metric_exporter)
+        let metric_reader = PeriodicReader::builder(metric_exporter, Tokio)
             .with_interval(std::time::Duration::from_secs(5)) // TODO: If there is a way, do we want to give the user the ability to control this?
             .build();
 
@@ -113,7 +112,7 @@ impl OtelFactor {
 
 pub struct InstanceState {
     pub(crate) state: Arc<RwLock<State>>,
-    pub(crate) span_processor: Arc<BatchSpanProcessor>,
+    pub(crate) span_processor: Arc<BatchSpanProcessor<Tokio>>,
     pub(crate) metric_reader: Arc<PeriodicReader>,
 }
 

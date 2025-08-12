@@ -143,7 +143,7 @@ itertools = "0.14"
 lazy_static = "1.5"
 opentelemetry = "0.28"
 opentelemetry-otlp = { version = "0.28", default-features = false, features = ["grpc-tonic", "http", "http-proto", "reqwest-blocking-client", "metrics", "trace", "logs"] }
-opentelemetry_sdk = "0.28"
+opentelemetry_sdk = {version =  "0.28", features = ["experimental_trace_batch_span_processor_with_async_runtime", "experimental_metrics_periodicreader_with_async_runtime"]}
 path-absolutize = "3"
 quote = "1"
 rand = "0.9"

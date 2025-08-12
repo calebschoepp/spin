@@ -4,7 +4,6 @@ use opentelemetry::trace::TraceContextExt;
 use opentelemetry_sdk::metrics::reader::MetricReader;
 use opentelemetry_sdk::trace::SpanProcessor;
 use spin_world::wasi;
-
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 use crate::InstanceState;
