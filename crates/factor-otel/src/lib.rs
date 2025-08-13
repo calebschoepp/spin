@@ -7,10 +7,9 @@ use opentelemetry::{
     Context,
 };
 use opentelemetry_sdk::{
-    metrics::periodic_reader_with_async_runtime::PeriodicReader,
+    metrics::PeriodicReader,
     resource::{EnvResourceDetector, ResourceDetector, TelemetryResourceDetector},
-    runtime::Tokio,
-    trace::{span_processor_with_async_runtime::BatchSpanProcessor, SpanProcessor},
+    trace::{BatchSpanProcessor, SpanProcessor},
     Resource,
 };
 use spin_factors::{Factor, FactorData, PrepareContext, RuntimeFactors, SelfInstanceBuilder};
@@ -19,7 +18,7 @@ use std::sync::{Arc, RwLock};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 pub struct OtelFactor {
-    span_processor: Arc<BatchSpanProcessor<Tokio>>,
+    span_processor: Arc<BatchSpanProcessor>,
     metric_reader: Arc<PeriodicReader>,
 }
 
@@ -84,7 +83,7 @@ impl OtelFactor {
             OtlpProtocol::HttpJson => bail!("http/json OTLP protocol is not supported"),
         };
 
-        let mut span_processor = BatchSpanProcessor::builder(span_exporter, Tokio).build();
+        let mut span_processor = BatchSpanProcessor::builder(span_exporter).build();
 
         span_processor.set_resource(&resource);
 
@@ -99,7 +98,7 @@ impl OtelFactor {
         };
 
         // TODO: my hypothesis is that the PeriodicReader is sufficient, and we don't need a MeterProvider
-        let metric_reader = PeriodicReader::builder(metric_exporter, Tokio)
+        let metric_reader = PeriodicReader::builder(metric_exporter)
             .with_interval(std::time::Duration::from_secs(5)) // TODO: If there is a way, do we want to give the user the ability to control this?
             .build();
 
@@ -112,7 +111,7 @@ impl OtelFactor {
 
 pub struct InstanceState {
     pub(crate) state: Arc<RwLock<State>>,
-    pub(crate) span_processor: Arc<BatchSpanProcessor<Tokio>>,
+    pub(crate) span_processor: Arc<BatchSpanProcessor>,
     pub(crate) metric_reader: Arc<PeriodicReader>,
 }
 

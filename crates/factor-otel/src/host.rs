@@ -48,12 +48,16 @@ impl wasi::otel::tracing::Host for InstanceState {
     }
 
     async fn outer_span_context(&mut self) -> Result<wasi::otel::tracing::SpanContext> {
-        Ok(tracing::Span::current()
-            .context()
-            .span()
-            .span_context()
-            .clone()
-            .into())
+        let current_span = tracing::Span::current();
+        println!("current_span ID: {:?}", current_span.id());
+
+        let otel_context = current_span.context();
+        let otel_span = otel_context.span();
+        let span_context = otel_span.span_context();
+
+        println!("Host trace ID: {:x}", span_context.trace_id());
+
+        Ok(span_context.clone().into())
     }
 }
 
