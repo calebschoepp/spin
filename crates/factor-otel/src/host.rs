@@ -1,15 +1,15 @@
 use anyhow::anyhow;
 use anyhow::Result;
 use opentelemetry::trace::TraceContextExt;
+use opentelemetry_sdk::metrics::reader::MetricReader;
 use opentelemetry_sdk::trace::SpanProcessor;
-use spin_world::wasi::otel::tracing as wasi_otel;
-
+use spin_world::wasi;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 use crate::InstanceState;
 
-impl wasi_otel::Host for InstanceState {
-    async fn on_start(&mut self, context: wasi_otel::SpanContext) -> Result<()> {
+impl wasi::otel::tracing::Host for InstanceState {
+    async fn on_start(&mut self, context: wasi::otel::tracing::SpanContext) -> Result<()> {
         let mut state = self.state.write().unwrap();
 
         // Before we do anything make sure we track the original host span ID for reparenting
@@ -32,7 +32,7 @@ impl wasi_otel::Host for InstanceState {
         Ok(())
     }
 
-    async fn on_end(&mut self, span_data: wasi_otel::SpanData) -> Result<()> {
+    async fn on_end(&mut self, span_data: wasi::otel::tracing::SpanData) -> Result<()> {
         let mut state = self.state.write().unwrap();
 
         let span_context: opentelemetry::trace::SpanContext = span_data.span_context.clone().into();
@@ -42,17 +42,52 @@ impl wasi_otel::Host for InstanceState {
             Err(anyhow!("Trying to end a span that was not started"))?;
         }
 
-        self.processor.on_end(span_data.into());
+        self.span_processor.on_end(span_data.into());
 
         Ok(())
     }
 
-    async fn outer_span_context(&mut self) -> Result<wasi_otel::SpanContext> {
+    async fn outer_span_context(&mut self) -> Result<wasi::otel::tracing::SpanContext> {
         Ok(tracing::Span::current()
             .context()
             .span()
             .span_context()
             .clone()
             .into())
+    }
+}
+
+impl wasi::otel::metrics::Host for InstanceState {
+    async fn export(
+        &mut self,
+        metrics: wasi::otel::metrics::ResourceMetrics,
+    ) -> Result<Result<(), wasi::otel::metrics::MetricError>, anyhow::Error> {
+        use opentelemetry_sdk::error::OTelSdkError as O;
+        use opentelemetry_sdk::metrics::MetricError as M;
+        match self.metric_reader.collect(&mut metrics.into()) {
+            Ok(_) => (),
+            Err(e) => match e {
+                M::ExportErr(v) => return Err(anyhow!("Export error: {}", v.to_string())),
+                M::Config(v) => return Err(anyhow!("Config error: {}", v)),
+                M::InvalidInstrumentConfiguration(v) => {
+                    return Err(anyhow!(
+                        "Invalid Instrument Configuration error: {}",
+                        v.to_string()
+                    ))
+                }
+                M::Other(v) => return Err(anyhow!("Other error: {}", v)),
+                _ => panic!("unrecognized error type"),
+            },
+        };
+
+        // TODO: Test whether force_flush is required, or if the PeriodicReader flushes on its own
+        match self.metric_reader.force_flush() {
+            Ok(_) => Ok(Ok(())),
+            Err(e) => match e {
+                O::AlreadyShutdown => Err(anyhow!("Already Shutdown")),
+                O::InternalFailure(v) => Err(anyhow!("Internal Failure: {}", v)),
+                O::Timeout(v) => Err(anyhow!("Timed out after {}", v.as_secs())),
+            },
+        }
     }
 }

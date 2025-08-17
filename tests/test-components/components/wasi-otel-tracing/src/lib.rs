@@ -26,7 +26,7 @@ fn handle(req: Request) -> anyhow::Result<impl IntoResponse> {
 
 fn setup_tracer(propagate_context: bool) -> (BoxedTracer, Option<ContextGuard>) {
     // Set up a tracer using the WASI processor
-    let wasi_processor = opentelemetry_wasi::WasiProcessor::new();
+    let wasi_processor = opentelemetry_wasi::WasiSpanProcessor::new();
     let tracer_provider = SdkTracerProvider::builder()
         .with_span_processor(wasi_processor)
         .build();

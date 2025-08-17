@@ -1,0 +1,157 @@
+interface metrics {
+    use wasi:clocks/wall-clock@0.2.0.{datetime};
+    use wasi:clocks/monotonic-clock@0.2.0.{duration};
+
+    use types.{key-value};
+    use tracing.{span-id, trace-id};
+
+    %export: func(metrics: resource-metrics) -> result<_, metric-error>;
+
+    record resource-metrics {
+        %resource: %resource,
+        scope-metrics: list<scope-metrics>,
+    }
+
+    record %resource {
+        inner: resource-inner,
+    }
+
+    record resource-inner {
+        attributes: list<key-value>,
+        schema-url: option<string>,
+    }
+
+    record scope-metrics {
+        scope: instrumentation-scope,
+        metrics: list<metric>,
+    }
+
+    record instrumentation-scope {
+        name: string,
+        version: string,
+        schema-url: string,
+        attributes: list<key-value>,
+    }
+
+    record metric {
+        name: string,
+        description: string,
+        unit: string,
+        // TODO: unclear if `metric-data` is the correct way to represent the data. Based on the comments for the `Aggregation` trait in the same files as the `Metric` struct,
+        // as well as some suggestions from my AI assistant, it seems like this could be a good way to handle it. If not, open to suggestions.
+        // Also, keep in mind that there is an `Aggregation` enum in the `/src/metrics/aggregation.rs`, and this appears to be a separate type
+        // See https://github.com/open-telemetry/opentelemetry-rust/blob/189078d7a92e534d67137ffaed8e35456eaa589b/opentelemetry-sdk/src/metrics/data/mod.rs#L49
+        // See https://github.com/open-telemetry/opentelemetry-rust/blob/189078d7a92e534d67137ffaed8e35456eaa589b/opentelemetry-sdk/src/metrics/data/mod.rs#L41
+        data: metric-data,
+    }
+
+    variant metric-data {
+        gauge(gauge),
+        sum(sum),
+        histogram(histogram),
+        exponential-histogram(exponential-histogram),
+    }
+
+    record gauge {
+        data-points: list<gauge-data-point>,
+        start-time: option<datetime>,
+        time: datetime,
+    }
+
+    record gauge-data-point {
+        attributes: list<key-value>,
+        value: metric-number,
+        exemplars: list<exemplar>,
+    }
+
+    record sum {
+        data-points: list<sum-data-point>,
+        start-time: datetime,
+        time: datetime,
+        temporality: temporality-t,
+        is-monotonic: bool,
+    }
+
+    record sum-data-point {
+        attributes: list<key-value>,
+        value: metric-number,
+        exemplars: list<exemplar>,
+    }
+
+    record histogram {
+        data-points: list<histogram-data-point>,
+        start-time: datetime,
+        time: datetime,
+        temporality: temporality-t,
+    }
+
+    record histogram-data-point {
+        attributes: list<key-value>,
+        count: u64,
+        bounds: list<f64>,
+        bucket-counts: list<u64>,
+        min: option<metric-number>,
+        max: option<metric-number>,
+        sum: metric-number,
+        exemplars: list<exemplar>,
+    }
+
+    record exponential-histogram {
+        data-points: list<exponential-histogram-data-point>,
+        start-time: datetime,
+        time: datetime,
+        temporality: temporality-t,
+    }
+
+    record exponential-histogram-data-point {
+        attributes: list<key-value>,
+        count: u64, // TODO: check that u64 is acceptable replacement for usize
+        min: option<metric-number>,
+        max: option<metric-number>,
+        sum: metric-number,
+        scale: s8,
+        zero-count: u64,
+        positive-bucket: exponential-bucket,
+        negative-bucket: exponential-bucket,
+        zero-threshold: f64,
+        exemplars: list<exemplar>,
+    }
+
+    record exponential-bucket {
+        offset: s32,
+        counts: list<u64>,
+    }
+
+    record exemplar {
+        filtered-attributes: list<key-value>,
+        time: datetime,
+        value: metric-number,
+        span-id: span-id,
+        trace-id: trace-id,
+    }
+
+    enum temporality-t {
+        /// TODO: validate that cumulative is the default temporality in the SDK implementation
+        cumulative,
+        delta,
+        low-memory,
+    }
+
+    variant metric-number {
+        %f64(f64),
+        %s64(s64),
+        %u64(u64),
+    }
+
+    variant metric-error {
+        other(string),
+        config(string),
+        // TODO: double check that this is the correct way to implement the `export-err`:
+        // See https://github.com/open-telemetry/opentelemetry-rust/blob/189078d7a92e534d67137ffaed8e35456eaa589b/opentelemetry-sdk/src/metrics/error.rs#L22
+        // See https://github.com/open-telemetry/opentelemetry-rust/blob/189078d7a92e534d67137ffaed8e35456eaa589b/opentelemetry-sdk/src/error.rs#L8
+        export-err(exporter-name),
+        invalid-instrument-configuration(string),
+    }
+
+    type exporter-name = string;
+}
