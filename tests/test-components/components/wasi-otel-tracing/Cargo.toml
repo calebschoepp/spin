@@ -9,8 +9,8 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "1"
 http = "0.2"
-opentelemetry = { path = "../../../../../opentelemetry-rust/opentelemetry" }
-opentelemetry_sdk = { path = "../../../../../opentelemetry-rust/opentelemetry-sdk" }
-opentelemetry-wasi = { path = "../../../../../opentelemetry-wasi/rust" }
+opentelemetry = "0.28"
+opentelemetry_sdk = "0.28"
+opentelemetry-wasi = { git = "https://github.com/asteurer/opentelemetry-wasi.git", branch = "rust", subdirectory = "rust" }
 spin-sdk = "3.1.0"
 wit-bindgen = "0.30.0"
