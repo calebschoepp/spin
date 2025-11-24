@@ -169,7 +169,7 @@ impl OtelFactorState {
     ///          | spin_key_value.get |
     /// ```
     ///
-    ///  Setting the guest spans parent as the host is enabled through current_span_context.
+    /// Setting the guest spans parent as the host is enabled through current_span_context.
     /// However, the more difficult task is having the host factor spans be children of the guest
     /// span. [`OtelFactorState::reparent_tracing_span`] handles this by reparenting the current span to
     /// be a child of the last active guest span (which is tracked internally in the otel factor).
