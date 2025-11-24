@@ -158,7 +158,9 @@ impl v2::Host for InstanceState {
 impl v2::HostConnection for InstanceState {
     #[instrument(name = "spin_sqlite.open", skip(self), err(level = Level::INFO), fields(otel.kind = "client", db.system = "sqlite", sqlite.backend = Empty))]
     async fn open(&mut self, database: String) -> Result<Resource<v2::Connection>, v2::Error> {
-        self.otel_context.reparent_tracing_span();
+        if let Err(e) = self.otel_context.reparent_tracing_span() {
+            return Err(v2::Error::Io(e.to_string()));
+        };
         self.open_impl(database).await.map_err(to_v2_error)
     }
 
@@ -169,7 +171,9 @@ impl v2::HostConnection for InstanceState {
         query: String,
         parameters: Vec<v2::Value>,
     ) -> Result<v2::QueryResult, v2::Error> {
-        self.otel_context.reparent_tracing_span();
+        if let Err(e) = self.otel_context.reparent_tracing_span() {
+            return Err(v2::Error::Io(e.to_string()));
+        };
         self.execute_impl(
             connection,
             query,

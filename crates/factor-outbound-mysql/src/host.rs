@@ -38,7 +38,9 @@ impl<C: Client> v2::Host for InstanceState<C> {}
 impl<C: Client> v2::HostConnection for InstanceState<C> {
     #[instrument(name = "spin_outbound_mysql.open", skip(self, address), err(level = Level::INFO), fields(otel.kind = "client", db.system = "mysql", db.address = Empty, server.port = Empty, db.namespace = Empty))]
     async fn open(&mut self, address: String) -> Result<Resource<Connection>, v2::Error> {
-        self.otel_context.reparent_tracing_span();
+        if let Err(e) = self.otel_context.reparent_tracing_span() {
+            return Err(v2::Error::Other(e.to_string()));
+        };
         spin_factor_outbound_networking::record_address_fields(&address);
 
         if !self
@@ -60,7 +62,9 @@ impl<C: Client> v2::HostConnection for InstanceState<C> {
         statement: String,
         params: Vec<ParameterValue>,
     ) -> Result<(), v2::Error> {
-        self.otel_context.reparent_tracing_span();
+        if let Err(e) = self.otel_context.reparent_tracing_span() {
+            return Err(v2::Error::Other(e.to_string()));
+        };
         self.get_client(connection)
             .await?
             .execute(statement, params)
@@ -74,7 +78,9 @@ impl<C: Client> v2::HostConnection for InstanceState<C> {
         statement: String,
         params: Vec<ParameterValue>,
     ) -> Result<v2_types::RowSet, v2::Error> {
-        self.otel_context.reparent_tracing_span();
+        if let Err(e) = self.otel_context.reparent_tracing_span() {
+            return Err(v2::Error::Other(e.to_string()));
+        };
         self.get_client(connection)
             .await?
             .query(statement, params)

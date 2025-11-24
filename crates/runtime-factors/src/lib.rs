@@ -45,9 +45,10 @@ impl TriggerFactors {
         state_dir: Option<PathBuf>,
         working_dir: impl Into<PathBuf>,
         allow_transient_writes: bool,
+        spin_version: &str,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            otel: OtelFactor::new()?,
+            otel: OtelFactor::new(spin_version)?,
             wasi: wasi_factor(working_dir, allow_transient_writes),
             variables: VariablesFactor::default(),
             key_value: KeyValueFactor::new(),
