@@ -183,11 +183,7 @@ impl OtelFactorState {
     pub fn reparent_tracing_span(&self) {
         // If state is None then we want to return early b/c the factor doesn't depend on the
         // Otel factor and therefore there is nothing to do
-        let state = if let Some(state) = self.state.as_ref() {
-            state.read().unwrap()
-        } else {
-            return;
-        };
+        let Some(state) = self.state.as_ref() { state.read().unwrap() } else { return };
 
         // If there are no active guest spans then there is nothing to do
         let Some((_, active_span_context)) = state.guest_span_contexts.last() else {
