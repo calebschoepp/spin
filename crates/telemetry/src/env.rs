@@ -19,7 +19,7 @@ const SPIN_DISABLE_LOG_TO_TRACING: &str = "SPIN_DISABLE_LOG_TO_TRACING";
 /// - `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
 ///
 /// Note that this is overridden if OTEL_SDK_DISABLED is set and not empty.
-pub fn otel_tracing_enabled() -> bool {
+pub(crate) fn otel_tracing_enabled() -> bool {
     any_vars_set(&[
         OTEL_EXPORTER_OTLP_ENDPOINT,
         OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
