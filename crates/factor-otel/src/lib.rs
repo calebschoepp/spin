@@ -29,7 +29,6 @@ impl Factor for OtelFactor {
     type InstanceBuilder = InstanceState;
 
     fn init(&mut self, ctx: &mut impl spin_factors::InitContext<Self>) -> anyhow::Result<()> {
-        // TODO: This feels weird. I'm wondering if it can be fixed by wrangling the bindgen macro in `crates/wasi_otel/lib.rs`.
         ctx.link_bindings(wasi_otel::wasi::otel::tracing::add_to_linker::<_, FactorData<Self>>)?;
         ctx.link_bindings(wasi_otel::wasi::otel::metrics::add_to_linker::<_, FactorData<Self>>)?;
         Ok(())
