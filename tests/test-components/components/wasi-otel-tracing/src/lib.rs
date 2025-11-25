@@ -1,5 +1,3 @@
-use std::time;
-
 use opentelemetry::{
     global::{self, BoxedTracer, ObjectSafeSpan},
     trace::{TraceContextExt, Tracer},
@@ -11,6 +9,7 @@ use spin_sdk::{
     http::{IntoResponse, Method, Params, Request, Response, Router},
     http_component,
 };
+use std::time;
 
 #[http_component]
 fn handle(req: Request) -> anyhow::Result<impl IntoResponse> {
@@ -21,6 +20,8 @@ fn handle(req: Request) -> anyhow::Result<impl IntoResponse> {
     router.get("/events", events);
     router.get("/links", links);
     router.get_async("/root-span", root_span);
+    router.get("/start-called-end-not-called", start_called_end_not_called);
+    router.get("/child-span-outlives-parent", child_span_outlives_parent);
     Ok(router.handle(req))
 }
 
@@ -125,6 +126,22 @@ async fn make_request() {
     let _res: Response = spin_sdk::http::send(req).await.unwrap();
 }
 
-// TODO: Test what happens if start is called but not end
-// TODO: Test what happens if end is called but not start
-// TODO: What happens if child span outlives parent
+fn start_called_end_not_called(_req: Request, _params: Params) -> Response {
+    let (tracer, _ctx) = setup_tracer(false);
+    let _span = tracer.start("start_called_end_not_called");
+    // span.end() is not called...
+    Response::new(200, "")
+}
+
+fn child_span_outlives_parent(_req: Request, _params: Params) -> Response {
+    let (tracer, _ctx) = setup_tracer(false);
+    let child = {
+        let parent = tracer.start("parent");
+        let parent_ctx = Context::current_with_span(parent);
+        let _guard = parent_ctx.clone().attach();
+        let child = tracer.start("child");
+        child
+    };
+    drop(child);
+    Response::new(200, "")
+}
