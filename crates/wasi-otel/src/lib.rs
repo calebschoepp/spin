@@ -46,4 +46,6 @@ wasmtime::component::bindgen!({
 pub use fermyon::spin as v1;
 pub use fermyon::spin2_0_0 as v2;
 
-mod conversions;
+mod common_conversions;
+mod metrics_conversions;
+mod trace_conversions;

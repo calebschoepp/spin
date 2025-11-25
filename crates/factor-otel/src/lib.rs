@@ -1,6 +1,6 @@
 mod host;
 
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::bail;
 use indexmap::IndexMap;
 use opentelemetry::{
     trace::{SpanContext, SpanId, TraceContextExt},
@@ -178,18 +178,18 @@ impl OtelFactorState {
     /// This MUST only be called from a factor host implementation function that is instrumented.
     ///
     /// This MUST be called at the very start of the function before any awaits.
-    pub fn reparent_tracing_span(&self) -> Result<(), Error> {
+    pub fn reparent_tracing_span(&self) {
         // If state is None then we want to return early b/c the factor doesn't depend on the
         // Otel factor and therefore there is nothing to do
         let state = if let Some(state) = self.state.as_ref() {
             state.read().unwrap()
         } else {
-            return Ok(());
+            return;
         };
 
         // If there are no active guest spans then there is nothing to do
         let Some((_, active_span_context)) = state.guest_span_contexts.last() else {
-            return Ok(());
+            return;
         };
 
         // Ensure that we are not reparenting the original host span
@@ -201,13 +201,12 @@ impl OtelFactorState {
                 .span_id()
                 .eq(&original_host_span_id)
             {
-                return Err(anyhow!("Incorrectly attempting to reparent the original host span. Likely `reparent_tracing_span` was called in an incorrect location."));
+                panic!("Incorrectly attempting to reparent the original host span. Likely `reparent_tracing_span` was called in an incorrect location.");
             }
         }
 
         // Now reparent the current span to the last active guest span
         let parent_context = Context::new().with_remote_span_context(active_span_context.clone());
         tracing::Span::current().set_parent(parent_context);
-        Ok(())
     }
 }

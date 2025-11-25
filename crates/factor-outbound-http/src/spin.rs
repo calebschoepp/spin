@@ -15,10 +15,7 @@ impl spin_http::Host for crate::InstanceState {
         fields(otel.kind = "client", url.full = Empty, http.request.method = Empty,
         http.response.status_code = Empty, otel.name = Empty, server.address = Empty, server.port = Empty))]
     async fn send_request(&mut self, req: Request) -> Result<Response, HttpError> {
-        if let Err(e) = self.otel_context.reparent_tracing_span() {
-            tracing::error!("{}", e.to_string());
-            return Err(HttpError::RuntimeError);
-        };
+        self.otel_context.reparent_tracing_span();
 
         let span = Span::current();
         record_request_fields(&span, &req);

@@ -118,7 +118,7 @@ impl key_value::HostStore for KeyValueDispatch {
     #[instrument(name = "spin_key_value.open", skip(self), err, fields(otel.kind = "client", kv.backend=self.manager.summary(&name).unwrap_or("unknown".to_string())))]
     async fn open(&mut self, name: String) -> Result<Result<Resource<key_value::Store>, Error>> {
         if let Some(otel_context) = self.otel_context.as_ref() {
-            otel_context.reparent_tracing_span()?;
+            otel_context.reparent_tracing_span();
         }
         Ok(async {
             if self.allowed_stores.contains(&name) {
@@ -143,7 +143,7 @@ impl key_value::HostStore for KeyValueDispatch {
         key: String,
     ) -> Result<Result<Option<Vec<u8>>, Error>> {
         if let Some(otel_context) = self.otel_context.as_ref() {
-            otel_context.reparent_tracing_span()?;
+            otel_context.reparent_tracing_span();
         }
         let store = self.get_store(store)?;
         Ok(store.get(&key).await.map_err(track_error_on_span))
@@ -157,7 +157,7 @@ impl key_value::HostStore for KeyValueDispatch {
         value: Vec<u8>,
     ) -> Result<Result<(), Error>> {
         if let Some(otel_context) = self.otel_context.as_ref() {
-            otel_context.reparent_tracing_span()?;
+            otel_context.reparent_tracing_span();
         }
         let store = self.get_store(store)?;
         Ok(store.set(&key, &value).await.map_err(track_error_on_span))
@@ -170,7 +170,7 @@ impl key_value::HostStore for KeyValueDispatch {
         key: String,
     ) -> Result<Result<(), Error>> {
         if let Some(otel_context) = self.otel_context.as_ref() {
-            otel_context.reparent_tracing_span()?;
+            otel_context.reparent_tracing_span();
         }
         let store = self.get_store(store)?;
         Ok(store.delete(&key).await.map_err(track_error_on_span))
@@ -183,7 +183,7 @@ impl key_value::HostStore for KeyValueDispatch {
         key: String,
     ) -> Result<Result<bool, Error>> {
         if let Some(otel_context) = self.otel_context.as_ref() {
-            otel_context.reparent_tracing_span()?;
+            otel_context.reparent_tracing_span();
         }
         let store = self.get_store(store)?;
         Ok(store.exists(&key).await.map_err(track_error_on_span))
@@ -195,7 +195,7 @@ impl key_value::HostStore for KeyValueDispatch {
         store: Resource<key_value::Store>,
     ) -> Result<Result<Vec<String>, Error>> {
         if let Some(otel_context) = self.otel_context.as_ref() {
-            otel_context.reparent_tracing_span()?;
+            otel_context.reparent_tracing_span();
         }
         let store = self.get_store(store)?;
         Ok(store.get_keys().await.map_err(track_error_on_span))

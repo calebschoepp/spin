@@ -219,9 +219,7 @@ impl<CF: ClientFactory> v2::Host for InstanceState<CF> {}
 impl<CF: ClientFactory> v2::HostConnection for InstanceState<CF> {
     #[instrument(name = "spin_outbound_pg.open", skip(self, address), err(level = Level::INFO), fields(otel.kind = "client", db.system = "postgresql", db.address = Empty, server.port = Empty, db.namespace = Empty))]
     async fn open(&mut self, address: String) -> Result<Resource<v2::Connection>, v2::Error> {
-        if let Err(e) = self.otel_context.reparent_tracing_span() {
-            return Err(v2::Error::Other(e.to_string()));
-        };
+        self.otel_context.reparent_tracing_span();
         spin_factor_outbound_networking::record_address_fields(&address);
 
         if !self
@@ -243,9 +241,7 @@ impl<CF: ClientFactory> v2::HostConnection for InstanceState<CF> {
         statement: String,
         params: Vec<v2_types::ParameterValue>,
     ) -> Result<u64, v2::Error> {
-        if let Err(e) = self.otel_context.reparent_tracing_span() {
-            return Err(v2::Error::Other(e.to_string()));
-        };
+        self.otel_context.reparent_tracing_span();
         Ok(self
             .get_client(connection)
             .await?
@@ -260,9 +256,7 @@ impl<CF: ClientFactory> v2::HostConnection for InstanceState<CF> {
         statement: String,
         params: Vec<v2_types::ParameterValue>,
     ) -> Result<v2_types::RowSet, v2::Error> {
-        if let Err(e) = self.otel_context.reparent_tracing_span() {
-            return Err(v2::Error::Other(e.to_string()));
-        };
+        self.otel_context.reparent_tracing_span();
         Ok(self
             .get_client(connection)
             .await?

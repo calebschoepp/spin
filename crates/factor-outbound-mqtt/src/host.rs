@@ -79,9 +79,7 @@ impl v2::HostConnection for InstanceState {
         password: String,
         keep_alive_interval: u64,
     ) -> Result<Resource<Connection>, Error> {
-        if let Err(e) = self.otel_context.reparent_tracing_span() {
-            return Err(Error::Other(e.to_string()));
-        };
+        self.otel_context.reparent_tracing_span();
 
         if !self
             .is_address_allowed(&address)
@@ -116,9 +114,7 @@ impl v2::HostConnection for InstanceState {
         payload: Vec<u8>,
         qos: Qos,
     ) -> Result<(), Error> {
-        if let Err(e) = self.otel_context.reparent_tracing_span() {
-            return Err(Error::Other(e.to_string()));
-        };
+        self.otel_context.reparent_tracing_span();
 
         let conn = self.get_conn(connection).await.map_err(other_error)?;
 
