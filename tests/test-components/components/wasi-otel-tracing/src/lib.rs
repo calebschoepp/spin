@@ -139,8 +139,7 @@ fn child_span_outlives_parent(_req: Request, _params: Params) -> Response {
         let parent = tracer.start("parent");
         let parent_ctx = Context::current_with_span(parent);
         let _guard = parent_ctx.clone().attach();
-        let child = tracer.start("child");
-        child
+        tracer.start("child")
     };
     drop(child);
     Response::new(200, "")
