@@ -127,14 +127,14 @@ async fn make_request() {
 }
 
 fn start_called_end_not_called(_req: Request, _params: Params) -> Response {
-    let (tracer, _ctx) = setup_tracer(false);
+    let (tracer, _ctx) = setup_tracer(true);
     let _span = tracer.start("start_called_end_not_called");
     // span.end() is not called...
     Response::new(200, "")
 }
 
 fn child_span_outlives_parent(_req: Request, _params: Params) -> Response {
-    let (tracer, _ctx) = setup_tracer(false);
+    let (tracer, _ctx) = setup_tracer(true);
     let child = {
         let parent = tracer.start("parent");
         let parent_ctx = Context::current_with_span(parent);
