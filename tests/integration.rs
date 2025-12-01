@@ -1715,7 +1715,11 @@ mod otel_integration_tests {
             },
             move |env| {
                 let spin = env.runtime_mut();
-                assert_spin_request(spin, Request::new(Method::Get, "/one"), Response::new(200))?;
+                assert_spin_request(
+                    spin,
+                    Request::new(Method::Get, "/hello"),
+                    Response::new_with_body(200, "Hello World!\n"),
+                )?;
 
                 let spans = rt.block_on(collector.exported_spans(5, Duration::from_secs(5)));
 
